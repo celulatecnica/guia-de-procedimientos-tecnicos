@@ -117,9 +117,7 @@
       <img src="imagenes/logo-directv.png" alt="Logo" />
       <h2>Guia de Procedimentos Técnicos</h2>
       <p>Faça login com sua conta corporativa para acessar o conteúdo.</p>
-
       <div id="status" class="status">Carregando autenticação...</div>
-
       <button id="btnLogin" class="btn-login" onclick="login()" disabled>
         Entrar com Microsoft
       </button>
@@ -130,7 +128,6 @@
     <div id="topbar">
       <button id="btnLogout" onclick="logout()">Sair</button>
     </div>
-
     <iframe src="archivos_pdf/gpt.pdf#view=FitH"></iframe>
   </div>
 
@@ -195,14 +192,8 @@
         msalInstance = new msal.PublicClientApplication(msalConfig);
         await msalInstance.initialize();
 
-        const accounts = msalInstance.getAllAccounts();
-        const account = msalInstance.getActiveAccount() || accounts[0] || null;
-
-        if (account) {
-          updateAuthUI(account);
-        } else {
-          updateAuthUI(null);
-        }
+        const account = msalInstance.getActiveAccount() || msalInstance.getAllAccounts()[0] || null;
+        updateAuthUI(account);
       } catch (error) {
         console.error("Erro ao inicializar MSAL:", error);
         setStatus("Erro ao inicializar a autenticação.");
@@ -252,17 +243,24 @@
           return;
         }
 
-        const account = msalInstance.getActiveAccount();
+        const account = msalInstance.getActiveAccount() || msalInstance.getAllAccounts()[0] || null;
+
         if (account) {
-          await msalInstance.logoutPopup({ account });
-        } else {
-          await msalInstance.logoutPopup();
+          // logoutRedirect evita a janela de seleção de conta
+          msalInstance.setActiveAccount(account);
+          await msalInstance.logoutRedirect({
+            account: account,
+            postLogoutRedirectUri: redirectUri
+          });
+          return;
         }
+
+        showLogin();
       } catch (error) {
         console.error("Erro ao sair:", error);
+        showLogin();
       } finally {
         if (msalInstance) msalInstance.setActiveAccount(null);
-        showLogin();
         setStatus("Sessão encerrada.");
         document.getElementById("btnLogin").disabled = false;
       }
