@@ -8,7 +8,7 @@
 
     imagenes/logo-directv.png
 
-    https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js
+    <script src="https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js"></script>
 
     <style>
         html,
@@ -104,6 +104,7 @@
 
     <div id="login-screen">
         <div class="login-card">
+
             imagenes/logo-directv.png
 
             <h2>Guia de Procedimentos Técnicos</h2>
@@ -115,6 +116,7 @@
             <button class="btn-login" onclick="login()">
                 Entrar com Microsoft
             </button>
+
         </div>
     </div>
 
@@ -126,7 +128,8 @@
             </button>
         </div>
 
-        archivos_pdf/gpt.pdf#view=FitH
+        archivos_pdf/gpt.pdf#view=FitH">
+        </iframe>
 
     </div>
 
@@ -140,7 +143,8 @@
             }
         };
 
-        const msalInstance = new msal.PublicClientApplication(msalConfig);
+        const msalInstance =
+            new msal.PublicClientApplication(msalConfig);
 
         async function login() {
 
@@ -148,10 +152,10 @@
 
                 await msalInstance.loginPopup({
                     scopes: [
-                        "User.Read",
                         "openid",
                         "profile",
-                        "email"
+                        "email",
+                        "User.Read"
                     ]
                 });
 
@@ -174,13 +178,8 @@
 
             if (accounts.length > 0) {
 
-                document.getElementById(
-                    "login-screen"
-                ).style.display = "none";
-
-                document.getElementById(
-                    "content"
-                ).style.display = "block";
+                document.getElementById("login-screen").style.display = "none";
+                document.getElementById("content").style.display = "block";
             }
         }
 
@@ -188,13 +187,8 @@
 
             msalInstance.logoutPopup();
 
-            document.getElementById(
-                "content"
-            ).style.display = "none";
-
-            document.getElementById(
-                "login-screen"
-            ).style.display = "flex";
+            document.getElementById("content").style.display = "none";
+            document.getElementById("login-screen").style.display = "flex";
         }
 
         showContent();
@@ -202,5 +196,4 @@
     </script>
 
 </body>
-
 </html>
