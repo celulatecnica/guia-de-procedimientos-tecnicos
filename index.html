@@ -45,7 +45,14 @@
 
     .login-card p {
       color: #666;
-      margin-bottom: 25px;
+      margin-bottom: 18px;
+    }
+
+    .status {
+      font-size: 13px;
+      color: #555;
+      margin-bottom: 20px;
+      min-height: 18px;
     }
 
     .btn-login {
@@ -60,6 +67,11 @@
 
     .btn-login:hover {
       background: #106ebe;
+    }
+
+    .btn-login:disabled {
+      background: #8bb8da;
+      cursor: not-allowed;
     }
 
     #content {
@@ -104,7 +116,10 @@
       <img src="imagenes/logo-directv.png" alt="Logo" />
       <h2>Guia de Procedimentos Técnicos</h2>
       <p>Faça login com sua conta corporativa para acessar o conteúdo.</p>
-      <button class="btn-login" onclick="login()">Entrar com Microsoft</button>
+      <div id="status" class="status">Carregando autenticação...</div>
+      <button id="btnLogin" class="btn-login" onclick="login()" disabled>
+        Entrar com Microsoft
+      </button>
     </div>
   </div>
 
@@ -134,11 +149,26 @@
 
     let msalInstance = null;
 
+    function setStatus(text) {
+      const el = document.getElementById("status");
+      if (el) el.textContent = text;
+    }
+
+    function showLogin() {
+      document.getElementById("login-screen").style.display = "flex";
+      document.getElementById("content").style.display = "none";
+    }
+
+    function showContent() {
+      document.getElementById("login-screen").style.display = "none";
+      document.getElementById("content").style.display = "block";
+    }
+
     async function initializeMsal() {
       try {
         if (typeof msal === "undefined") {
-          console.error("MSAL não foi carregado.");
-          alert("Biblioteca de autenticação não carregada. Verifique a conexão com o script do MSAL.");
+          setStatus("Falha ao carregar a biblioteca Microsoft.");
+          console.error("MSAL não foi carregado. Verifique o CDN.");
           return;
         }
 
@@ -156,27 +186,14 @@
           showContent();
         } else {
           showLogin();
+          setStatus("Pronto para autenticar.");
+          document.getElementById("btnLogin").disabled = false;
         }
       } catch (error) {
         console.error("Erro ao inicializar MSAL:", error);
+        setStatus("Erro ao inicializar a autenticação.");
         showLogin();
-      }
-    }
-
-    function showLogin() {
-      document.getElementById("login-screen").style.display = "flex";
-      document.getElementById("content").style.display = "none";
-    }
-
-    function showContent() {
-      const account = msalInstance.getActiveAccount() || msalInstance.getAllAccounts()[0];
-
-      if (account) {
-        msalInstance.setActiveAccount(account);
-        document.getElementById("login-screen").style.display = "none";
-        document.getElementById("content").style.display = "block";
-      } else {
-        showLogin();
+        document.getElementById("btnLogin").disabled = false;
       }
     }
 
@@ -187,6 +204,9 @@
           return;
         }
 
+        document.getElementById("btnLogin").disabled = true;
+        setStatus("Abrindo login da Microsoft...");
+
         const loginResponse = await msalInstance.loginPopup(loginRequest);
         if (loginResponse && loginResponse.account) {
           msalInstance.setActiveAccount(loginResponse.account);
@@ -195,13 +215,18 @@
         showContent();
       } catch (error) {
         console.error("Erro no login:", error);
+        setStatus("Falha na autenticação.");
         alert("Não foi possível realizar a autenticação.");
+        document.getElementById("btnLogin").disabled = false;
       }
     }
 
     async function logout() {
       try {
-        if (!msalInstance) return;
+        if (!msalInstance) {
+          showLogin();
+          return;
+        }
 
         const account = msalInstance.getActiveAccount();
         if (account) {
@@ -213,6 +238,8 @@
         console.error("Erro ao sair:", error);
       } finally {
         showLogin();
+        setStatus("Sessão encerrada.");
+        document.getElementById("btnLogin").disabled = false;
       }
     }
 
