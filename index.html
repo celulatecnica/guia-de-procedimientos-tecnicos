@@ -166,12 +166,6 @@
 
     async function initializeMsal() {
       try {
-        if (typeof msal === "undefined") {
-          setStatus("Falha ao carregar a biblioteca Microsoft.");
-          console.error("MSAL não foi carregado. Verifique o CDN.");
-          return;
-        }
-
         msalInstance = new msal.PublicClientApplication(msalConfig);
         await msalInstance.initialize();
 
