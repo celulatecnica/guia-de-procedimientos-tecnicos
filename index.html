@@ -79,40 +79,25 @@
       background: #fff;
     }
 
-    #docTitle {
-      position: fixed;
-      top: 10px;
-      left: 15px;
-      z-index: 1000;
-      background: rgba(0, 0, 0, 0.65);
-      color: #fff;
-      padding: 8px 10px;
-      border-radius: 6px;
-      font-size: 13px;
-      max-width: 60vw;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
+#topbar {
+  position: fixed;
+  top: 10px;
+  right: 110px;
+  z-index: 1000;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
 
-    #topbar {
-      position: fixed;
-      top: 10px;
-      right: 15px;
-      z-index: 1000;
-      display: flex;
-      gap: 10px;
-      align-items: center;
-    }
-
-    #btnLogout {
-      background: #d13438;
-      color: white;
-      border: none;
-      padding: 8px 14px;
-      border-radius: 4px;
-      cursor: pointer;
-    }
+#btnLogout {
+  background: #d13438;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+}
 
     #btnLogout:hover { background: #a4262c; }
 
@@ -159,7 +144,6 @@
   </div>
 
   <div id="content">
-    <div id="docTitle" title=""></div>
 
     <div id="topbar">
       <button id="btnLogout" onclick="logout()">Sair</button>
@@ -206,7 +190,6 @@ function getDocInfo(docKey) {
 
 function setDocument(docKey) {
 
-  const titleEl = document.getElementById("docTitle");
   const frame = document.getElementById("docFrame");
 
   let pdfFile;
@@ -216,11 +199,6 @@ function setDocument(docKey) {
   } else {
     pdfFile = `gpt_${docKey}.pdf`;
   }
-
-  titleEl.textContent = docKey
-    .replaceAll("_", " ")
-    .replaceAll("-", " ")
-    .toUpperCase();
 
   frame.src = `archivos_pdf/${pdfFile}#view=FitH`;
 }
