@@ -3,97 +3,135 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Teste Login Microsoft</title>
+  <title>Guia de Procedimentos Técnicos (GPT)</title>
 
   <style>
+    html,
     body {
       margin: 0;
-      height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      padding: 0;
+      height: 100%;
       font-family: Arial, sans-serif;
       background: #f4f4f4;
     }
 
-    .card {
-      background: white;
-      padding: 32px;
-      border-radius: 12px;
-      box-shadow: 0 0 20px rgba(0,0,0,0.12);
-      text-align: center;
-      width: 380px;
-      max-width: calc(100% - 40px);
+    #login-screen {
+      width: 100%;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
-    h2 {
-      margin-top: 0;
+    .login-card {
+      background: white;
+      padding: 40px;
+      border-radius: 12px;
+      box-shadow: 0 0 20px rgba(0, 0, 0, 0.15);
+      text-align: center;
+      max-width: 400px;
+      width: calc(100% - 40px);
+    }
+
+    .login-card img {
+      width: 120px;
+      margin-bottom: 20px;
+      object-fit: contain;
+    }
+
+    .login-card h2 {
       margin-bottom: 10px;
     }
 
-    p {
+    .login-card p {
       color: #666;
-      margin-bottom: 16px;
+      margin-bottom: 18px;
     }
 
-    button {
+    .status {
+      font-size: 13px;
+      color: #555;
+      margin-bottom: 20px;
+      min-height: 18px;
+      word-break: break-word;
+    }
+
+    .btn-login {
       background: #0078d4;
       color: white;
       border: none;
       border-radius: 6px;
-      padding: 12px 18px;
+      padding: 12px 20px;
       cursor: pointer;
       font-size: 14px;
     }
 
-    button:hover {
+    .btn-login:hover {
       background: #106ebe;
     }
 
-    button:disabled {
+    .btn-login:disabled {
       background: #8bb8da;
       cursor: not-allowed;
     }
 
-    #logoutBtn {
+    #content {
       display: none;
+      width: 100%;
+      height: 100%;
+    }
+
+    iframe {
+      width: 100%;
+      height: 100vh;
+      border: none;
+      display: block;
+    }
+
+    #topbar {
+      position: fixed;
+      top: 10px;
+      right: 15px;
+      z-index: 1000;
+    }
+
+    #btnLogout {
       background: #d13438;
-      margin-top: 10px;
+      color: white;
+      border: none;
+      padding: 8px 14px;
+      border-radius: 4px;
+      cursor: pointer;
     }
 
-    #logoutBtn:hover {
+    #btnLogout:hover {
       background: #a4262c;
-    }
-
-    #status {
-      margin-top: 16px;
-      font-size: 14px;
-      color: #444;
-      min-height: 20px;
-      word-break: break-word;
-    }
-
-    #redirectInfo {
-      margin-top: 10px;
-      font-size: 12px;
-      color: #777;
-      word-break: break-word;
-      line-height: 1.4;
     }
   </style>
 
   <script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.0/lib/msal-browser.min.js"></script>
 </head>
 <body>
-  <div class="card">
-    <h2>Teste de Login Microsoft</h2>
-    <p>Use sua conta corporativa para validar a autenticação.</p>
+  <div id="login-screen">
+    <div class="login-card">
+      <img src="imagenes/logo-directv.png" alt="Logo" />
+      <h2>Guia de Procedimentos Técnicos</h2>
+      <p>Faça login com sua conta corporativa para acessar o conteúdo.</p>
 
-    <button id="loginBtn" onclick="login()" disabled>Entrar com Microsoft</button>
-    <button id="logoutBtn" onclick="logout()">Sair</button>
+      <div id="status" class="status">Carregando autenticação...</div>
 
-    <div id="status">Carregando...</div>
-    <div id="redirectInfo"></div>
+      <button id="btnLogin" class="btn-login" onclick="login()" disabled>
+        Entrar com Microsoft
+      </button>
+    </div>
+  </div>
+
+  <div id="content">
+    <div id="topbar">
+      <button id="btnLogout" onclick="logout()">Sair</button>
+    </div>
+
+    <iframe src="archivos_pdf/gpt.pdf#view=FitH"></iframe>
   </div>
 
   <script>
@@ -118,32 +156,35 @@
     let msalInstance = null;
 
     function setStatus(text) {
-      document.getElementById("status").textContent = text;
+      const el = document.getElementById("status");
+      if (el) el.textContent = text;
     }
 
-    function showLoginState() {
-      document.getElementById("loginBtn").style.display = "inline-block";
-      document.getElementById("logoutBtn").style.display = "none";
+    function showLogin() {
+      document.getElementById("login-screen").style.display = "flex";
+      document.getElementById("content").style.display = "none";
     }
 
-    function showLoggedState() {
-      document.getElementById("loginBtn").style.display = "none";
-      document.getElementById("logoutBtn").style.display = "inline-block";
+    function showContent() {
+      document.getElementById("login-screen").style.display = "none";
+      document.getElementById("content").style.display = "block";
     }
 
-    function updateUserInfo(account) {
+    function updateAuthUI(account) {
       if (account) {
-        setStatus("Logado como: " + (account.username || account.name || "usuário autenticado"));
-        showLoggedState();
+        msalInstance.setActiveAccount(account);
+        showContent();
       } else {
-        setStatus("Nenhum usuário autenticado.");
-        showLoginState();
+        showLogin();
+        setStatus("Pronto para autenticar.");
+        document.getElementById("btnLogin").disabled = false;
       }
     }
 
-    async function init() {
+    async function initializeMsal() {
       try {
-        document.getElementById("redirectInfo").textContent = "Redirect URI usado: " + redirectUri;
+        document.getElementById("status").textContent = "Carregando autenticação...";
+        document.getElementById("btnLogin").disabled = true;
 
         if (typeof msal === "undefined") {
           setStatus("MSAL não carregou.");
@@ -158,49 +199,59 @@
         const account = msalInstance.getActiveAccount() || accounts[0] || null;
 
         if (account) {
-          msalInstance.setActiveAccount(account);
+          updateAuthUI(account);
+        } else {
+          updateAuthUI(null);
         }
-
-        updateUserInfo(account);
-        document.getElementById("loginBtn").disabled = false;
       } catch (error) {
-        console.error("Erro ao inicializar:", error);
-        setStatus("Erro ao inicializar MSAL.");
-        document.getElementById("loginBtn").disabled = false;
-        showLoginState();
+        console.error("Erro ao inicializar MSAL:", error);
+        setStatus("Erro ao inicializar a autenticação.");
+        showLogin();
+        document.getElementById("btnLogin").disabled = false;
       }
     }
 
     async function login() {
       try {
         if (!msalInstance) {
-          alert("MSAL não inicializado.");
+          alert("MSAL ainda não foi inicializado.");
           return;
         }
 
-        document.getElementById("loginBtn").disabled = true;
+        document.getElementById("btnLogin").disabled = true;
         setStatus("Abrindo login da Microsoft...");
 
-        const response = await msalInstance.loginPopup(loginRequest);
+        const loginResponse = await msalInstance.loginPopup(loginRequest);
 
-        if (response && response.account) {
-          msalInstance.setActiveAccount(response.account);
-          updateUserInfo(response.account);
+        if (loginResponse && loginResponse.account) {
+          msalInstance.setActiveAccount(loginResponse.account);
+          showContent();
         } else {
-          updateUserInfo(msalInstance.getActiveAccount());
+          const account = msalInstance.getActiveAccount() || msalInstance.getAllAccounts()[0] || null;
+          if (account) {
+            msalInstance.setActiveAccount(account);
+            showContent();
+          } else {
+            showLogin();
+            setStatus("Não foi possível completar o login.");
+            document.getElementById("btnLogin").disabled = false;
+          }
         }
-
-        document.getElementById("loginBtn").disabled = false;
       } catch (error) {
         console.error("Erro no login:", error);
-        setStatus("Falha no login. Veja o console.");
-        document.getElementById("loginBtn").disabled = false;
-        showLoginState();
+        setStatus("Falha na autenticação.");
+        alert("Não foi possível realizar a autenticação.");
+        document.getElementById("btnLogin").disabled = false;
       }
     }
 
     async function logout() {
       try {
+        if (!msalInstance) {
+          showLogin();
+          return;
+        }
+
         const account = msalInstance.getActiveAccount();
         if (account) {
           await msalInstance.logoutPopup({ account });
@@ -210,12 +261,14 @@
       } catch (error) {
         console.error("Erro ao sair:", error);
       } finally {
-        msalInstance.setActiveAccount(null);
-        updateUserInfo(null);
+        if (msalInstance) msalInstance.setActiveAccount(null);
+        showLogin();
+        setStatus("Sessão encerrada.");
+        document.getElementById("btnLogin").disabled = false;
       }
     }
 
-    window.addEventListener("load", init);
+    window.addEventListener("load", initializeMsal);
   </script>
 </body>
 </html>
