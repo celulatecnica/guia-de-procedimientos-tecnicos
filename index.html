@@ -290,49 +290,56 @@ function setDocument(docKey) {
     }
 
     async function login() {
-      try {
-        if (!msalInstance) {
-          alert("MSAL ainda não foi inicializado.");
-          return;
-        }
+  try {
 
-        document.getElementById("btnLogin").disabled = true;
-        setStatus("Abrindo login da Microsoft...");
-
-        const res = await msalInstance.loginPopup(loginRequest);
-        if (res && res.account) {
-          msalInstance.setActiveAccount(res.account);
-        }
-
-        await enforceAuthAndLoadDoc();
-      } catch (error) {
-        console.error("Erro no login:", error);
-        setStatus("Falha na autenticação.");
-        alert("Não foi possível realizar a autenticação.");
-        document.getElementById("btnLogin").disabled = false;
-      }
+    if (!msalInstance) {
+      alert("MSAL ainda não foi inicializado.");
+      return;
     }
 
-    async function logout() {
-      try {
-        if (!msalInstance) {
-          showLogin();
-          return;
-        }
+    document.getElementById("btnLogin").disabled = true;
+    setStatus("Abrindo login da Microsoft...");
 
-        const account = getBestAccount();
+    // Limpa a conta ativa antes de abrir o login
+    msalInstance.setActiveAccount(null);
 
-        // logoutRedirect tende a não pedir seleção de conta
-        await msalInstance.logoutRedirect({
-          account,
-          postLogoutRedirectUri: redirectUri
-        });
-      } catch (error) {
-        console.error("Erro ao sair:", error);
-        showLogin();
-        setStatus("Sessão encerrada.");
-      }
+    const res = await msalInstance.loginPopup({
+      ...loginRequest,
+      prompt: "select_account"
+    });
+
+    if (res && res.account) {
+      msalInstance.setActiveAccount(res.account);
     }
+
+    await enforceAuthAndLoadDoc();
+
+  } catch (error) {
+
+    console.error("Erro no login:", error);
+
+    setStatus("Falha na autenticação.");
+    alert("Não foi possível realizar a autenticação.");
+
+    document.getElementById("btnLogin").disabled = false;
+  }
+}
+
+async function logout() {
+  try {
+
+    const account = getBestAccount();
+
+    await msalInstance.logoutPopup({
+      account
+    });
+
+    msalInstance.setActiveAccount(null);
+
+  } catch (error) {
+    console.error("Erro ao sair:", error);
+  }
+}
 
     // Revalida ao voltar para a aba / e recarrega doc ao navegar com back/forward
     window.addEventListener("focus", () => {
