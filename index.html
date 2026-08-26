@@ -174,16 +174,27 @@
     //    Ajuste aqui para cada PDF. O link no PDF/HTML deve apontar para:
     //    index.html?doc=<chave>
     // =====================================================================
-    const DOCS = {
-      gpt: {
-        title: "Guia de Procedimentos Técnicos (GPT)",
-        path: "archivos_pdf/gpt.pdf"
-      },
-      "directv-link": {
-        title: "DIRECTV Link",
-        path: "archivos_pdf/gpt_directv-link.pdf"
-      }
-    };
+function getDocInfo(docKey) {
+
+  const specialDocs = {
+    gpt: {
+      title: "Guia de Procedimentos Técnicos (GPT)",
+      path: "archivos_pdf/gpt.pdf"
+    }
+  };
+
+  if (specialDocs[docKey]) {
+    return specialDocs[docKey];
+  }
+
+  return {
+    title: docKey
+      .replaceAll("_", " ")
+      .replaceAll("-", " ")
+      .toUpperCase(),
+    path: `archivos_pdf/gpt_${docKey}.pdf`
+  };
+}
 
     // =====================================================================
     // 2) SELECIONA DOCUMENTO VIA ?doc=
@@ -193,22 +204,26 @@
       return params.get("doc") || "gpt";
     }
 
-    function setDocument(docKey) {
-      const doc = DOCS[docKey];
-      const titleEl = document.getElementById("docTitle");
-      const frame = document.getElementById("docFrame");
+function setDocument(docKey) {
 
-      if (!doc) {
-        titleEl.textContent = "Documento não encontrado";
-        titleEl.title = "Documento não encontrado";
-        frame.src = "about:blank";
-        return;
-      }
+  const titleEl = document.getElementById("docTitle");
+  const frame = document.getElementById("docFrame");
 
-      titleEl.textContent = doc.title;
-      titleEl.title = doc.title;
-      frame.src = doc.path + "#view=FitH";
-    }
+  let pdfFile;
+
+  if (docKey === "gpt") {
+    pdfFile = "gpt.pdf";
+  } else {
+    pdfFile = `gpt_${docKey}.pdf`;
+  }
+
+  titleEl.textContent = docKey
+    .replaceAll("_", " ")
+    .replaceAll("-", " ")
+    .toUpperCase();
+
+  frame.src = `archivos_pdf/${pdfFile}#view=FitH`;
+}
 
     // =====================================================================
     // 3) MSAL CONFIG
