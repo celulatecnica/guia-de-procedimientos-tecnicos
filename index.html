@@ -96,7 +96,6 @@
     }
   </style>
 
-  <!-- MSAL precisa ser carregado ANTES do seu script -->
   <script src="https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js"></script>
 </head>
 <body>
@@ -113,7 +112,6 @@
     <div id="topbar">
       <button id="btnLogout" onclick="logout()">Sair</button>
     </div>
-
     <iframe src="archivos_pdf/gpt.pdf#view=FitH"></iframe>
   </div>
 
@@ -134,34 +132,40 @@
       scopes: ["User.Read", "openid", "profile", "email"]
     };
 
-    const msalInstance = new msal.PublicClientApplication(msalConfig);
+    let msalInstance = null;
 
     async function initializeMsal() {
       try {
+        if (typeof msal === "undefined") {
+          console.error("MSAL não foi carregado.");
+          alert("Biblioteca de autenticação não carregada. Verifique a conexão com o script do MSAL.");
+          return;
+        }
+
+        msalInstance = new msal.PublicClientApplication(msalConfig);
         await msalInstance.initialize();
+
+        const redirectResult = await msalInstance.handleRedirectPromise();
+        if (redirectResult && redirectResult.account) {
+          msalInstance.setActiveAccount(redirectResult.account);
+        }
 
         const accounts = msalInstance.getAllAccounts();
         if (accounts.length > 0) {
           msalInstance.setActiveAccount(accounts[0]);
           showContent();
         } else {
-          document.getElementById("login-screen").style.display = "flex";
-          document.getElementById("content").style.display = "none";
+          showLogin();
         }
       } catch (error) {
         console.error("Erro ao inicializar MSAL:", error);
+        showLogin();
       }
     }
 
-    async function login() {
-      try {
-        const loginResponse = await msalInstance.loginPopup(loginRequest);
-        msalInstance.setActiveAccount(loginResponse.account);
-        showContent();
-      } catch (error) {
-        console.error("Erro no login:", error);
-        alert("Não foi possível realizar a autenticação.");
-      }
+    function showLogin() {
+      document.getElementById("login-screen").style.display = "flex";
+      document.getElementById("content").style.display = "none";
     }
 
     function showContent() {
@@ -172,30 +176,47 @@
         document.getElementById("login-screen").style.display = "none";
         document.getElementById("content").style.display = "block";
       } else {
-        document.getElementById("login-screen").style.display = "flex";
-        document.getElementById("content").style.display = "none";
+        showLogin();
+      }
+    }
+
+    async function login() {
+      try {
+        if (!msalInstance) {
+          alert("MSAL ainda não foi inicializado.");
+          return;
+        }
+
+        const loginResponse = await msalInstance.loginPopup(loginRequest);
+        if (loginResponse && loginResponse.account) {
+          msalInstance.setActiveAccount(loginResponse.account);
+        }
+
+        showContent();
+      } catch (error) {
+        console.error("Erro no login:", error);
+        alert("Não foi possível realizar a autenticação.");
       }
     }
 
     async function logout() {
       try {
+        if (!msalInstance) return;
+
         const account = msalInstance.getActiveAccount();
         if (account) {
-          await msalInstance.logoutPopup({
-            account: account
-          });
+          await msalInstance.logoutPopup({ account });
         } else {
           await msalInstance.logoutPopup();
         }
       } catch (error) {
         console.error("Erro ao sair:", error);
       } finally {
-        document.getElementById("content").style.display = "none";
-        document.getElementById("login-screen").style.display = "flex";
+        showLogin();
       }
     }
 
-    initializeMsal();
+    window.addEventListener("load", initializeMsal);
   </script>
 </body>
 </html>
