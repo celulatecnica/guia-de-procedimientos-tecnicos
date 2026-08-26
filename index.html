@@ -6,8 +6,7 @@
   <title>Guia de Procedimentos Técnicos (GPT)</title>
 
   <style>
-    html,
-    body {
+    html, body {
       margin: 0;
       padding: 0;
       height: 100%;
@@ -29,7 +28,7 @@
       border-radius: 12px;
       box-shadow: 0 0 20px rgba(0, 0, 0, 0.15);
       text-align: center;
-      max-width: 400px;
+      max-width: 420px;
       width: calc(100% - 40px);
     }
 
@@ -51,7 +50,7 @@
     .status {
       font-size: 13px;
       color: #555;
-      margin-bottom: 20px;
+      margin: 14px 0 20px;
       min-height: 18px;
       word-break: break-word;
     }
@@ -66,9 +65,7 @@
       font-size: 14px;
     }
 
-    .btn-login:hover {
-      background: #106ebe;
-    }
+    .btn-login:hover { background: #106ebe; }
 
     .btn-login:disabled {
       background: #8bb8da;
@@ -79,13 +76,23 @@
       display: none;
       width: 100%;
       height: 100%;
+      background: #fff;
     }
 
-    iframe {
-      width: 100%;
-      height: 100vh;
-      border: none;
-      display: block;
+    #docTitle {
+      position: fixed;
+      top: 10px;
+      left: 15px;
+      z-index: 1000;
+      background: rgba(0, 0, 0, 0.65);
+      color: #fff;
+      padding: 8px 10px;
+      border-radius: 6px;
+      font-size: 13px;
+      max-width: 60vw;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
     #topbar {
@@ -93,6 +100,9 @@
       top: 10px;
       right: 15px;
       z-index: 1000;
+      display: flex;
+      gap: 10px;
+      align-items: center;
     }
 
     #btnLogout {
@@ -104,13 +114,32 @@
       cursor: pointer;
     }
 
-    #btnLogout:hover {
-      background: #a4262c;
+    #btnLogout:hover { background: #a4262c; }
+
+    iframe {
+      width: 100%;
+      height: 100vh;
+      border: none;
+      display: block;
+    }
+
+    .hint {
+      color: #666;
+      font-size: 12px;
+      margin-top: 10px;
+      line-height: 1.4;
+    }
+
+    .hint code {
+      background: #f1f1f1;
+      padding: 2px 6px;
+      border-radius: 4px;
     }
   </style>
 
   <script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.0/lib/msal-browser.min.js"></script>
 </head>
+
 <body>
   <div id="login-screen">
     <div class="login-card">
@@ -118,27 +147,79 @@
       <h2>Guia de Procedimentos Técnicos</h2>
       <p>Faça login com sua conta corporativa para acessar o conteúdo.</p>
       <div id="status" class="status">Carregando autenticação...</div>
+
       <button id="btnLogin" class="btn-login" onclick="login()" disabled>
         Entrar com Microsoft
       </button>
+
+      <div class="hint">
+        Dica: abra documentos direto com <code>?doc=gpt</code> ou <code>?doc=directv-link</code>
+      </div>
     </div>
   </div>
 
   <div id="content">
+    <div id="docTitle" title=""></div>
+
     <div id="topbar">
       <button id="btnLogout" onclick="logout()">Sair</button>
     </div>
-    <iframe src="archivos_pdf/gpt.pdf#view=FitH"></iframe>
+
+    <iframe id="docFrame" src="about:blank"></iframe>
   </div>
 
   <script>
+    // =====================================================================
+    // 1) MAPA DE DOCUMENTOS
+    //    Ajuste aqui para cada PDF. O link no PDF/HTML deve apontar para:
+    //    index.html?doc=<chave>
+    // =====================================================================
+    const DOCS = {
+      gpt: {
+        title: "Guia de Procedimentos Técnicos (GPT)",
+        path: "archivos_pdf/gpt.pdf"
+      },
+      "directv-link": {
+        title: "DIRECTV Link",
+        path: "archivos_pdf/gpt_directv-link.pdf"
+      }
+    };
+
+    // =====================================================================
+    // 2) SELECIONA DOCUMENTO VIA ?doc=
+    // =====================================================================
+    function getRequestedDocKey() {
+      const params = new URLSearchParams(window.location.search);
+      return params.get("doc") || "gpt";
+    }
+
+    function setDocument(docKey) {
+      const doc = DOCS[docKey];
+      const titleEl = document.getElementById("docTitle");
+      const frame = document.getElementById("docFrame");
+
+      if (!doc) {
+        titleEl.textContent = "Documento não encontrado";
+        titleEl.title = "Documento não encontrado";
+        frame.src = "about:blank";
+        return;
+      }
+
+      titleEl.textContent = doc.title;
+      titleEl.title = doc.title;
+      frame.src = doc.path + "#view=FitH";
+    }
+
+    // =====================================================================
+    // 3) MSAL CONFIG
+    // =====================================================================
     const redirectUri = window.location.origin + window.location.pathname;
 
     const msalConfig = {
       auth: {
         clientId: "bd3d9316-4683-4aea-ad47-8c237cdceb5e",
         authority: "https://login.microsoftonline.com/4abdf8c8-91c3-4c1b-9c71-6266b586ec6b",
-        redirectUri: redirectUri
+        redirectUri
       },
       cache: {
         cacheLocation: "sessionStorage",
@@ -147,7 +228,7 @@
     };
 
     const loginRequest = {
-      scopes: ["User.Read", "openid", "profile", "email"]
+      scopes: ["openid", "profile", "email", "User.Read"]
     };
 
     let msalInstance = null;
@@ -160,6 +241,7 @@
     function showLogin() {
       document.getElementById("login-screen").style.display = "flex";
       document.getElementById("content").style.display = "none";
+      document.getElementById("btnLogin").disabled = false;
     }
 
     function showContent() {
@@ -167,38 +249,51 @@
       document.getElementById("content").style.display = "block";
     }
 
-    function updateAuthUI(account) {
-      if (account) {
-        msalInstance.setActiveAccount(account);
-        showContent();
-      } else {
+    function getBestAccount() {
+      if (!msalInstance) return null;
+      return msalInstance.getActiveAccount() || msalInstance.getAllAccounts()[0] || null;
+    }
+
+    async function enforceAuthAndLoadDoc() {
+      const account = getBestAccount();
+
+      if (!account) {
         showLogin();
         setStatus("Pronto para autenticar.");
-        document.getElementById("btnLogin").disabled = false;
+        return;
       }
+
+      msalInstance.setActiveAccount(account);
+      showContent();
+
+      // Carrega o PDF correto conforme a URL atual
+      const docKey = getRequestedDocKey();
+      setDocument(docKey);
     }
 
     async function initializeMsal() {
       try {
-        document.getElementById("status").textContent = "Carregando autenticação...";
+        setStatus("Carregando autenticação...");
         document.getElementById("btnLogin").disabled = true;
 
         if (typeof msal === "undefined") {
           setStatus("MSAL não carregou.");
           console.error("msal undefined");
+          document.getElementById("btnLogin").disabled = false;
           return;
         }
 
         msalInstance = new msal.PublicClientApplication(msalConfig);
-        await msalInstance.initialize();
 
-        const account = msalInstance.getActiveAccount() || msalInstance.getAllAccounts()[0] || null;
-        updateAuthUI(account);
+        if (typeof msalInstance.initialize === "function") {
+          await msalInstance.initialize();
+        }
+
+        await enforceAuthAndLoadDoc();
       } catch (error) {
         console.error("Erro ao inicializar MSAL:", error);
         setStatus("Erro ao inicializar a autenticação.");
         showLogin();
-        document.getElementById("btnLogin").disabled = false;
       }
     }
 
@@ -212,22 +307,12 @@
         document.getElementById("btnLogin").disabled = true;
         setStatus("Abrindo login da Microsoft...");
 
-        const loginResponse = await msalInstance.loginPopup(loginRequest);
-
-        if (loginResponse && loginResponse.account) {
-          msalInstance.setActiveAccount(loginResponse.account);
-          showContent();
-        } else {
-          const account = msalInstance.getActiveAccount() || msalInstance.getAllAccounts()[0] || null;
-          if (account) {
-            msalInstance.setActiveAccount(account);
-            showContent();
-          } else {
-            showLogin();
-            setStatus("Não foi possível completar o login.");
-            document.getElementById("btnLogin").disabled = false;
-          }
+        const res = await msalInstance.loginPopup(loginRequest);
+        if (res && res.account) {
+          msalInstance.setActiveAccount(res.account);
         }
+
+        await enforceAuthAndLoadDoc();
       } catch (error) {
         console.error("Erro no login:", error);
         setStatus("Falha na autenticação.");
@@ -243,28 +328,28 @@
           return;
         }
 
-        const account = msalInstance.getActiveAccount() || msalInstance.getAllAccounts()[0] || null;
+        const account = getBestAccount();
 
-        if (account) {
-          // logoutRedirect evita a janela de seleção de conta
-          msalInstance.setActiveAccount(account);
-          await msalInstance.logoutRedirect({
-            account: account,
-            postLogoutRedirectUri: redirectUri
-          });
-          return;
-        }
-
-        showLogin();
+        // logoutRedirect tende a não pedir seleção de conta
+        await msalInstance.logoutRedirect({
+          account,
+          postLogoutRedirectUri: redirectUri
+        });
       } catch (error) {
         console.error("Erro ao sair:", error);
         showLogin();
-      } finally {
-        if (msalInstance) msalInstance.setActiveAccount(null);
         setStatus("Sessão encerrada.");
-        document.getElementById("btnLogin").disabled = false;
       }
     }
+
+    // Revalida ao voltar para a aba / e recarrega doc ao navegar com back/forward
+    window.addEventListener("focus", () => {
+      if (msalInstance) enforceAuthAndLoadDoc().catch(console.error);
+    });
+
+    window.addEventListener("popstate", () => {
+      if (msalInstance) enforceAuthAndLoadDoc().catch(console.error);
+    });
 
     window.addEventListener("load", initializeMsal);
   </script>
