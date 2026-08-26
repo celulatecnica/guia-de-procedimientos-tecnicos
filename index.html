@@ -1,30 +1,206 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
-  <meta charset="UTF-8">
-  <title>Guia de Procedimentos Técnicos (GPT)</title>
-  <link rel="icon" type="image/png" href="imagenes/logo-directv.png">
-  <style>
-    html, body {
-      margin: 0;
-      padding: 0;
-      height: 100%;
-      overflow: hidden;
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guia de Procedimentos Técnicos (GPT)</title>
 
-    iframe {
-      width: 100%;
-      height: 100%;
-      border: none;
-      display: block;
-    }
-  </style>
+    imagenes/logo-directv.png
 
+    uth.net/browser/2.38.3/js/msal-browser.min.js"></script>
+
+    <style>
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            font-family: Arial, sans-serif;
+            background: #f4f4f4;
+        }
+
+        #login-screen {
+            width: 100%;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .login-card {
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.15);
+            text-align: center;
+            max-width: 400px;
+        }
+
+        .login-card img {
+            width: 120px;
+            margin-bottom: 20px;
+        }
+
+        .login-card h2 {
+            margin-bottom: 10px;
+        }
+
+        .login-card p {
+            color: #666;
+            margin-bottom: 25px;
+        }
+
+        .btn-login {
+            background: #0078D4;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 12px 20px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .btn-login:hover {
+            background: #106ebe;
+        }
+
+        #content {
+            display: none;
+            width: 100%;
+            height: 100%;
+        }
+
+        iframe {
+            width: 100%;
+            height: 100vh;
+            border: none;
+            display: block;
+        }
+
+        #topbar {
+            position: fixed;
+            top: 10px;
+            right: 15px;
+            z-index: 1000;
+        }
+
+        #btnLogout {
+            background: #d13438;
+            color: white;
+            border: none;
+            padding: 8px 14px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        #btnLogout:hover {
+            background: #a4262c;
+        }
+    </style>
 </head>
 
 <body>
 
-  <iframe src="archivos_pdf/gpt.pdf#view=FitH"></iframe>
+    <div id="login-screen">
+        <div class="login-card">
+            imagenes/logo-directv.png
+
+            <h2>Guia de Procedimentos Técnicos</h2>
+
+            <p>
+                Faça login com sua conta corporativa para acessar o conteúdo.
+            </p>
+
+            <button class="btn-login" onclick="login()">
+                Entrar com Microsoft
+            </button>
+        </div>
+    </div>
+
+    <div id="content">
+
+        <div id="topbar">
+            <button id="btnLogout" onclick="logout()">
+                Sair
+            </button>
+        </div>
+
+        archivos_pdf/gpt.pdf#view=FitH
+
+    </div>
+
+    <script>
+
+        const msalConfig = {
+            auth: {
+                clientId: "bd3d9316-4683-4aea-ad47-8c237cdceb5e",
+                authority: "https://login.microsoftonline.com/4abdf8c8-91c3-4c1b-9c71-6266b586ec6b",
+                redirectUri: "https://celulatecnica.github.io/guia-de-procedimentos-tecnicos/"
+            }
+        };
+
+        const msalInstance = new msal.PublicClientApplication(msalConfig);
+
+        async function login() {
+
+            try {
+
+                await msalInstance.loginPopup({
+                    scopes: [
+                        "User.Read",
+                        "openid",
+                        "profile",
+                        "email"
+                    ]
+                });
+
+                showContent();
+
+            } catch (error) {
+
+                console.error(error);
+
+                alert(
+                    "Não foi possível realizar a autenticação."
+                );
+            }
+        }
+
+        function showContent() {
+
+            const accounts =
+                msalInstance.getAllAccounts();
+
+            if (accounts.length > 0) {
+
+                document.getElementById(
+                    "login-screen"
+                ).style.display = "none";
+
+                document.getElementById(
+                    "content"
+                ).style.display = "block";
+            }
+        }
+
+        function logout() {
+
+            msalInstance.logoutPopup();
+
+            document.getElementById(
+                "content"
+            ).style.display = "none";
+
+            document.getElementById(
+                "login-screen"
+            ).style.display = "flex";
+        }
+
+        showContent();
+
+    </script>
 
 </body>
+
 </html>
