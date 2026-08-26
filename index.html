@@ -1,199 +1,201 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
-
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Guia de Procedimentos Técnicos (GPT)</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Guia de Procedimentos Técnicos (GPT)</title>
 
-    imagenes/logo-directv.png
+  <style>
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      font-family: Arial, sans-serif;
+      background: #f4f4f4;
+    }
 
-    <script src="https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js"></script>
+    #login-screen {
+      width: 100%;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
 
-    <style>
-        html,
-        body {
-            margin: 0;
-            padding: 0;
-            height: 100%;
-            font-family: Arial, sans-serif;
-            background: #f4f4f4;
-        }
+    .login-card {
+      background: white;
+      padding: 40px;
+      border-radius: 12px;
+      box-shadow: 0 0 20px rgba(0, 0, 0, 0.15);
+      text-align: center;
+      max-width: 400px;
+      width: calc(100% - 40px);
+    }
 
-        #login-screen {
-            width: 100%;
-            height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
+    .login-card img {
+      width: 120px;
+      margin-bottom: 20px;
+      object-fit: contain;
+    }
 
-        .login-card {
-            background: white;
-            padding: 40px;
-            border-radius: 12px;
-            box-shadow: 0 0 20px rgba(0, 0, 0, 0.15);
-            text-align: center;
-            max-width: 400px;
-        }
+    .login-card h2 {
+      margin-bottom: 10px;
+    }
 
-        .login-card img {
-            width: 120px;
-            margin-bottom: 20px;
-        }
+    .login-card p {
+      color: #666;
+      margin-bottom: 25px;
+    }
 
-        .login-card h2 {
-            margin-bottom: 10px;
-        }
+    .btn-login {
+      background: #0078d4;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      padding: 12px 20px;
+      cursor: pointer;
+      font-size: 14px;
+    }
 
-        .login-card p {
-            color: #666;
-            margin-bottom: 25px;
-        }
+    .btn-login:hover {
+      background: #106ebe;
+    }
 
-        .btn-login {
-            background: #0078D4;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            padding: 12px 20px;
-            cursor: pointer;
-            font-size: 14px;
-        }
+    #content {
+      display: none;
+      width: 100%;
+      height: 100%;
+    }
 
-        .btn-login:hover {
-            background: #106ebe;
-        }
+    iframe {
+      width: 100%;
+      height: 100vh;
+      border: none;
+      display: block;
+    }
 
-        #content {
-            display: none;
-            width: 100%;
-            height: 100%;
-        }
+    #topbar {
+      position: fixed;
+      top: 10px;
+      right: 15px;
+      z-index: 1000;
+    }
 
-        iframe {
-            width: 100%;
-            height: 100vh;
-            border: none;
-            display: block;
-        }
+    #btnLogout {
+      background: #d13438;
+      color: white;
+      border: none;
+      padding: 8px 14px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
 
-        #topbar {
-            position: fixed;
-            top: 10px;
-            right: 15px;
-            z-index: 1000;
-        }
+    #btnLogout:hover {
+      background: #a4262c;
+    }
+  </style>
 
-        #btnLogout {
-            background: #d13438;
-            color: white;
-            border: none;
-            padding: 8px 14px;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-
-        #btnLogout:hover {
-            background: #a4262c;
-        }
-    </style>
+  <!-- MSAL precisa ser carregado ANTES do seu script -->
+  <script src="https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js"></script>
 </head>
-
 <body>
+  <div id="login-screen">
+    <div class="login-card">
+      <img src="imagenes/logo-directv.png" alt="Logo" />
+      <h2>Guia de Procedimentos Técnicos</h2>
+      <p>Faça login com sua conta corporativa para acessar o conteúdo.</p>
+      <button class="btn-login" onclick="login()">Entrar com Microsoft</button>
+    </div>
+  </div>
 
-    <div id="login-screen">
-        <div class="login-card">
-
-            imagenes/logo-directv.png
-
-            <h2>Guia de Procedimentos Técnicos</h2>
-
-            <p>
-                Faça login com sua conta corporativa para acessar o conteúdo.
-            </p>
-
-            <button class="btn-login" onclick="login()">
-                Entrar com Microsoft
-            </button>
-
-        </div>
+  <div id="content">
+    <div id="topbar">
+      <button id="btnLogout" onclick="logout()">Sair</button>
     </div>
 
-    <div id="content">
+    <iframe src="archivos_pdf/gpt.pdf#view=FitH"></iframe>
+  </div>
 
-        <div id="topbar">
-            <button id="btnLogout" onclick="logout()">
-                Sair
-            </button>
-        </div>
+  <script>
+    const msalConfig = {
+      auth: {
+        clientId: "bd3d9316-4683-4aea-ad47-8c237cdceb5e",
+        authority: "https://login.microsoftonline.com/4abdf8c8-91c3-4c1b-9c71-6266b586ec6b",
+        redirectUri: "https://celulatecnica.github.io/guia-de-procedimientos-tecnicos/"
+      },
+      cache: {
+        cacheLocation: "sessionStorage",
+        storeAuthStateInCookie: false
+      }
+    };
 
-        archivos_pdf/gpt.pdf#view=FitH">
-        </iframe>
+    const loginRequest = {
+      scopes: ["User.Read", "openid", "profile", "email"]
+    };
 
-    </div>
+    const msalInstance = new msal.PublicClientApplication(msalConfig);
 
-    <script>
+    async function initializeMsal() {
+      try {
+        await msalInstance.initialize();
 
-        const msalConfig = {
-            auth: {
-                clientId: "bd3d9316-4683-4aea-ad47-8c237cdceb5e",
-                authority: "https://login.microsoftonline.com/4abdf8c8-91c3-4c1b-9c71-6266b586ec6b",
-                redirectUri: "https://celulatecnica.github.io/guia-de-procedimentos-tecnicos/"
-            }
-        };
-
-        const msalInstance =
-            new msal.PublicClientApplication(msalConfig);
-
-        async function login() {
-
-            try {
-
-                await msalInstance.loginPopup({
-                    scopes: [
-                        "openid",
-                        "profile",
-                        "email",
-                        "User.Read"
-                    ]
-                });
-
-                showContent();
-
-            } catch (error) {
-
-                console.error(error);
-
-                alert(
-                    "Não foi possível realizar a autenticação."
-                );
-            }
+        const accounts = msalInstance.getAllAccounts();
+        if (accounts.length > 0) {
+          msalInstance.setActiveAccount(accounts[0]);
+          showContent();
+        } else {
+          document.getElementById("login-screen").style.display = "flex";
+          document.getElementById("content").style.display = "none";
         }
+      } catch (error) {
+        console.error("Erro ao inicializar MSAL:", error);
+      }
+    }
 
-        function showContent() {
-
-            const accounts =
-                msalInstance.getAllAccounts();
-
-            if (accounts.length > 0) {
-
-                document.getElementById("login-screen").style.display = "none";
-                document.getElementById("content").style.display = "block";
-            }
-        }
-
-        function logout() {
-
-            msalInstance.logoutPopup();
-
-            document.getElementById("content").style.display = "none";
-            document.getElementById("login-screen").style.display = "flex";
-        }
-
+    async function login() {
+      try {
+        const loginResponse = await msalInstance.loginPopup(loginRequest);
+        msalInstance.setActiveAccount(loginResponse.account);
         showContent();
+      } catch (error) {
+        console.error("Erro no login:", error);
+        alert("Não foi possível realizar a autenticação.");
+      }
+    }
 
-    </script>
+    function showContent() {
+      const account = msalInstance.getActiveAccount() || msalInstance.getAllAccounts()[0];
 
+      if (account) {
+        msalInstance.setActiveAccount(account);
+        document.getElementById("login-screen").style.display = "none";
+        document.getElementById("content").style.display = "block";
+      } else {
+        document.getElementById("login-screen").style.display = "flex";
+        document.getElementById("content").style.display = "none";
+      }
+    }
+
+    async function logout() {
+      try {
+        const account = msalInstance.getActiveAccount();
+        if (account) {
+          await msalInstance.logoutPopup({
+            account: account
+          });
+        } else {
+          await msalInstance.logoutPopup();
+        }
+      } catch (error) {
+        console.error("Erro ao sair:", error);
+      } finally {
+        document.getElementById("content").style.display = "none";
+        document.getElementById("login-screen").style.display = "flex";
+      }
+    }
+
+    initializeMsal();
+  </script>
 </body>
 </html>
