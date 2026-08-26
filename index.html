@@ -108,7 +108,8 @@
     }
   </style>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/msal-browser/2.38.0/msal-browser.min.js" crossorigin="anonymous"></script>
+  <!-- Arquivo local do MSAL -->
+  <script src="js/msal-browser.min.js"></script>
 </head>
 <body>
   <div id="login-screen">
@@ -150,8 +151,7 @@
     let msalInstance = null;
 
     function setStatus(text) {
-      const el = document.getElementById("status");
-      if (el) el.textContent = text;
+      document.getElementById("status").textContent = text;
     }
 
     function showLogin() {
@@ -166,6 +166,12 @@
 
     async function initializeMsal() {
       try {
+        if (typeof msal === "undefined") {
+          setStatus("Arquivo local do MSAL não encontrado.");
+          console.error("MSAL não foi carregado. Verifique o caminho local js/msal-browser.min.js");
+          return;
+        }
+
         msalInstance = new msal.PublicClientApplication(msalConfig);
         await msalInstance.initialize();
 
@@ -209,35 +215,4 @@
         showContent();
       } catch (error) {
         console.error("Erro no login:", error);
-        setStatus("Falha na autenticação.");
-        alert("Não foi possível realizar a autenticação.");
-        document.getElementById("btnLogin").disabled = false;
-      }
-    }
-
-    async function logout() {
-      try {
-        if (!msalInstance) {
-          showLogin();
-          return;
-        }
-
-        const account = msalInstance.getActiveAccount();
-        if (account) {
-          await msalInstance.logoutPopup({ account });
-        } else {
-          await msalInstance.logoutPopup();
-        }
-      } catch (error) {
-        console.error("Erro ao sair:", error);
-      } finally {
-        showLogin();
-        setStatus("Sessão encerrada.");
-        document.getElementById("btnLogin").disabled = false;
-      }
-    }
-
-    window.addEventListener("load", initializeMsal);
-  </script>
-</body>
-</html>
+        setStatus("Fal
