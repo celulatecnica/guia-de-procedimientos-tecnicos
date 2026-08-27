@@ -14,13 +14,13 @@ html, body {
   background: #FFFFFF;
 }
 
- #login-screen {
+#login-screen {
   width: 100%;
-  height: calc(100vh - 1.8cm);
-  margin-top: 1.8cm;
+  height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
+  padding-top: 1.8cm;
 }
 
 .login-card {
@@ -141,9 +141,9 @@ html, body {
 <body>
 
 
-<div id="login-header">
-  <div class="barra-superior"></div>
-  <div class="barra-inferior"></div>
+<div id="header-bars">
+  <div class="barra-escura"></div>
+  <div class="barra-clara"></div>
 </div>
 
   <div id="login-screen">
@@ -255,11 +255,11 @@ function setDocument(docKey) {
       if (el) el.textContent = text;
     }
 
-    function showLogin() {
-      document.getElementById("login-screen").style.display = "flex";
-      document.getElementById("content").style.display = "none";
-      document.getElementById("btnLogin").disabled = false;
-    }
+function showContent() {
+  document.getElementById("login-screen").style.display = "none";
+  document.getElementById("header-bars").style.display = "none";
+  document.getElementById("content").style.display = "block";
+}
 
     function showContent() {
       document.getElementById("login-screen").style.display = "none";
