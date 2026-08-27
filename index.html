@@ -255,16 +255,12 @@ function setDocument(docKey) {
       if (el) el.textContent = text;
     }
 
-function showContent() {
-  document.getElementById("login-screen").style.display = "none";
-  document.getElementById("header-bars").style.display = "none";
-  document.getElementById("content").style.display = "block";
+function showLogin() {
+  document.getElementById("login-screen").style.display = "flex";
+  document.getElementById("header-bars").style.display = "block";
+  document.getElementById("content").style.display = "none";
+  document.getElementById("btnLogin").disabled = false;
 }
-
-    function showContent() {
-      document.getElementById("login-screen").style.display = "none";
-      document.getElementById("content").style.display = "block";
-    }
 
     function getBestAccount() {
       if (!msalInstance) return null;
