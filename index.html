@@ -167,6 +167,22 @@ iframe {
   object-fit: contain;
   display: block;
 }
+
+.linha-tecnicos {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.login-card .logo-directv-titulo {
+  display: inline-block;
+  width: 80px;
+  height: auto;
+  margin: 0;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+    
   </style>
 
   <script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.0/lib/msal-browser.min.js"></script>
@@ -187,8 +203,11 @@ iframe {
       <h2>
         Guia de<br>
         Procedimientos<br>
+        <span class="linha-tecnicos">
         Técnicos
-      </h2>
+        <img src="imagenes/directv.png">
+  </span>
+</h2>
       <p>Inicia sesión para acceder a los manuales de atención técnica.</p>
     <button id="btnLogin" class="btn-login" onclick="login()" disabled>
   Entrar
