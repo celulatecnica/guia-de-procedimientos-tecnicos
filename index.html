@@ -25,11 +25,12 @@ html, body {
 
 .login-card {
   background: #FBFBFD;
-  padding: 50px;
-  border-radius: 12px;
-  box-shadow: 0 0 20px rgba(0, 0, 0, 0.10);
+  padding: 60px;
+  border-radius: 16px;
+  border: 1px solid #ECECEC;
+  box-shadow: none;
   text-align: center;
-  max-width: 650px;
+  max-width: 700px;
   width: calc(100% - 40px);
 }
 
@@ -112,12 +113,12 @@ html, body {
       border-radius: 4px;
     }
 
-    #header-bars {
+#header-bars {
   position: fixed;
   top: 0;
   left: 0;
   width: 100%;
-  z-index: 1;
+  z-index: 9999;
 }
 
 .barra-escura {
@@ -130,7 +131,7 @@ html, body {
   width: 100%;
   height: 0.76cm;
   background: #FBFBFD;
-  border-bottom: 1px solid #E5E5E5;
+  border-bottom: 1px solid #E8E8E8;
 }
   </style>
 
@@ -138,11 +139,13 @@ html, body {
 </head>
 
 <body>
-  <div id="header-bars">
-  <div class="barra-escura"></div>
-  <div class="barra-clara"></div>
+
+
+<div id="login-header">
+  <div class="barra-superior"></div>
+  <div class="barra-inferior"></div>
 </div>
-  
+
   <div id="login-screen">
     <div class="login-card">
       <img src="imagenes/logo-directv.png" alt="Logo" />
@@ -167,6 +170,13 @@ html, body {
   </div>
 
   <script>
+
+function showContent() {
+  document.getElementById("login-screen").style.display = "none";
+  document.getElementById("header-bars").style.display = "none";
+  document.getElementById("content").style.display = "block";
+}
+    
     // =====================================================================
     // 1) MAPA DE DOCUMENTOS
     //    Ajuste aqui para cada PDF. O link no PDF/HTML deve apontar para:
