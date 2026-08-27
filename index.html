@@ -196,7 +196,36 @@ iframe {
   flex-shrink: 0;
   vertical-align: middle;
 }
-    
+
+.login-card {
+  background: #FBFBFD;
+  width: 1200px;
+  min-height: 500px;
+  padding: 90px;
+  border-radius: 12px;
+  box-sizing: border-box;
+
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.login-info {
+  max-width: 420px;
+}
+
+.login-ilustracao {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.login-ilustracao img {
+  max-width: 500px;
+  width: 100%;
+  height: auto;
+  display: block;
+}
   </style>
 
   <script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.0/lib/msal-browser.min.js"></script>
@@ -214,28 +243,39 @@ iframe {
 
   <div id="login-screen">
     <div class="login-card">
-      <h2>
-        Guía de<br>
-        Procedimientos<br>
-        <span class="linha-tecnicos">
+
+  <div class="login-info">
+
+    <h2>
+      Guía de<br>
+      Procedimientos<br>
+      <span class="linha-tecnicos">
         Técnicos
-        <img src="imagenes/directv.png" class="logo-directv-titulo" alt="DirectV">
-  </span>
-</h2>
-      <p>
+        imagenes/directv.png
+      </span>
+    </h2>
+
+    <p>
       Inicia sesión para acceder a los manuales<br>
       de atención técnica.
-      </p>
-<button id="btnLogin" class="btn-login" onclick="login()" disabled>
-  <img src="imagenes/icon_entrar.png">
-  <span>Entrar</span>
-</button>
+    </p>
 
-<div id="status" class="status">
-  Carregando autenticação...
-</div>
+    <button id="btnLogin" class="btn-login" onclick="login()" disabled>
+      imagenes/icon_entrar.png
+      <span>Entrar</span>
+    </button>
 
+    <div id="status" class="status">
+      Carregando autenticação...
     </div>
+
+  </div>
+
+  <div class="login-ilustracao">
+    imagenes/img_ilustracao.png
+  </div>
+
+</div>
   </div>
 
   <div id="content">
