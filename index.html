@@ -67,15 +67,28 @@ html, body {
 }
 
 .btn-login {
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+
   font-size: 18px;
-  padding: 18px 30px;
+  padding: 12px 18px;
   margin: 0;
   border: none;
   border-radius: 12px;
-  background: #0071E3;
+  background: #0078D4;
   color: #FFFFFF;
   cursor: pointer;
+}
+
+.btn-login .icone-entrar {
+  display: block;
+  width: 24px;
+  height: 24px;
+  margin: 0;
+  object-fit: contain;
+  flex-shrink: 0;
 }
 
     .btn-login:hover { background: #106ebe; }
@@ -213,8 +226,9 @@ iframe {
       Inicia sesión para acceder a los manuales<br>
       de atención técnica.
       </p>
-    <button id="btnLogin" class="btn-login" onclick="login()" disabled>
-  Entrar
+<button id="btnLogin" class="btn-login" onclick="login()" disabled>
+  <img src="imagenes/icon_entrar.png>
+  <span>Entrar</span>
 </button>
 
 <div id="status" class="status">
