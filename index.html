@@ -6,7 +6,6 @@
   <title>GPT Directv Latinoamérica</title>
   <link rel="icon" type="image/png" href="imagenes/logo-directv.png">
   <style>
-    /* [CSS anterior sem alterações] */
     * {
       box-sizing: border-box;
     }
@@ -207,9 +206,38 @@
     };
     
     let msalInstance = null;
-    // 🔧 FLAG PARA PREVENIR LOOP
     let isProcessingRedirect = false;
     let isMsalInitialized = false;
+
+    // =====================================================================
+    // FUNÇÕES AUXILIARES
+    // =====================================================================
+    
+    // 🔧 LIMPA CACHE DO MSAL
+    function clearMsalCache() {
+      try {
+        if (sessionStorage) {
+          // Remove tokens específicos do MSAL
+          const keysToRemove = [];
+          for (let i = 0; i < sessionStorage.length; i++) {
+            const key = sessionStorage.key(i);
+            if (key && (
+              key.includes("msal.") ||
+              key.includes("login.windows.net") ||
+              key.includes("microsoftonline.com") ||
+              key.includes("state-") ||
+              key.includes("nonce-")
+            )) {
+              keysToRemove.push(key);
+            }
+          }
+          keysToRemove.forEach(key => sessionStorage.removeItem(key));
+          console.log(`Limpas ${keysToRemove.length} chaves de cache`);
+        }
+      } catch (error) {
+        console.error("Erro ao limpar cache:", error);
+      }
+    }
 
     // =====================================================================
     // FUNÇÕES DE UI
@@ -282,7 +310,6 @@
     }
     
     async function initializeMsal() {
-      // 🔧 EVITA MÚLTIPLAS INICIALIZAÇÕES
       if (isMsalInitialized) {
         console.log("MSAL já foi inicializado");
         return;
@@ -305,20 +332,21 @@
           await msalInstance.initialize();
         }
         
-        // 🔧 MARCA COMO PROCESSANDO PARA EVITAR LOOP
         isProcessingRedirect = true;
         
-        const response = await msalInstance.handleRedirectPromise();
-        
-        // 🔧 DEPOIS DE PROCESSAR, VOLTA PARA FALSE
-        isProcessingRedirect = false;
-        
-        // ✅ Se houver resposta, significa que voltou do redirect
-        if (response) {
-          console.log("Retorno de redirecionamiento detectado");
-          if (response.account) {
-            msalInstance.setActiveAccount(response.account);
+        try {
+          const response = await msalInstance.handleRedirectPromise();
+          
+          if (response) {
+            console.log("Retorno de redirecionamiento detectado");
+            if (response.account) {
+              msalInstance.setActiveAccount(response.account);
+            }
           }
+        } catch (redirectError) {
+          console.error("Error procesando redirect:", redirectError);
+        } finally {
+          isProcessingRedirect = false;
         }
         
         isMsalInitialized = true;
@@ -340,7 +368,6 @@
           return;
         }
         
-        // 🔧 EVITA MÚLTIPLOS LOGINS SIMULTÂNEOS
         if (isProcessingRedirect) {
           console.log("Ya hay un login en proceso");
           return;
@@ -352,13 +379,22 @@
         isProcessingRedirect = true;
         
         try {
-          // 🔧 FORÇA A LIMPEZA DE CONTAS ANTES DE NOVO LOGIN
+          // 🔧 LIMPA TODAS AS CONTAS ANTES DE NOVO LOGIN
+          const allAccounts = msalInstance.getAllAccounts();
+          console.log(`Removiendo ${allAccounts.length} contas existentes`);
+          
+          for (let account of allAccounts) {
+            await msalInstance.getTokenCache().removeAccount(account);
+          }
+          
           msalInstance.setActiveAccount(null);
+          
+          // 🔧 LIMPA O CACHE DE SESSÃO
+          clearMsalCache();
           
           const res = await msalInstance.loginPopup({
             ...loginRequest,
             prompt: "select_account",
-            // 🔧 ADICIONA TIMEOUT PARA O POP-UP
             timeout: 60000
           });
           
@@ -373,7 +409,6 @@
         } catch (popupError) {
           isProcessingRedirect = false;
           
-          // Se foi cancelado pelo usuário, apenas mostra a tela de login
           if (popupError.errorCode === "user_cancelled") {
             console.log("Usuario canceló el login");
             setStatus("Login cancelado. Intenta nuevamente.");
@@ -396,19 +431,49 @@
     
     async function logout() {
       try {
+        document.getElementById("btnLogin").disabled = true;
+        setStatus("Cerrando sesión...");
+        
         const account = getBestAccount();
+        
+        // 🔧 PRIMEIRO FAZ LOGOUT NO MSAL
         if (account) {
-          await msalInstance.logoutPopup({ account });
+          try {
+            await msalInstance.logoutPopup({ account });
+          } catch (logoutError) {
+            console.error("Error en logout popup:", logoutError);
+            // Continua mesmo se houver erro
+          }
+        }
+        
+        // 🔧 DEPOIS REMOVE TODAS AS CONTAS E LIMPA CACHE
+        const allAccounts = msalInstance.getAllAccounts();
+        for (let acc of allAccounts) {
+          await msalInstance.getTokenCache().removeAccount(acc);
         }
         
         msalInstance.setActiveAccount(null);
         document.getElementById("userEmail").textContent = "";
+        
+        // 🔧 FORÇA LIMPEZA DO CACHE
+        clearMsalCache();
+        
+        // 🔧 REINICIALIZA O MSAL
+        isMsalInitialized = false;
+        
         showLoginOverlay();
         setStatus("Sesión cerrada. Vuelve a iniciar sesión.");
         
+        // 🔧 AGUARDA UM POUCO E REINICIALIZA
+        setTimeout(() => {
+          initializeMsal();
+        }, 500);
+        
       } catch (error) {
-        console.error("Error al cerrar sesión:", error);
+        console.error("Error ao cerrar sesión:", error);
         showLoginOverlay();
+        document.getElementById("btnLogin").disabled = false;
+        setStatus("Erro ao sair. Tente novamente.");
       }
     }
     
@@ -416,7 +481,6 @@
     // EVENT LISTENERS
     // =====================================================================
     window.addEventListener("focus", () => {
-      // 🔧 EVITA VERIFICAÇÃO SE JÁ ESTÁ PROCESSANDO
       if (msalInstance && !isProcessingRedirect && isMsalInitialized) {
         enforceAuthAndLoadDoc().catch(console.error);
       }
