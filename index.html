@@ -14,18 +14,29 @@ html, body {
   background: #FFFFFF;
 }
 
-.status {
-  font-size: 16px;
-  margin: 12px 0 12px 0;
-  text-align: left;
-  color: #FBFBFD;
-}
-
 .btn-login {
-  width: 50%;
+  width: 220px;
   height: 48px;
-  font-size: 16px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+
+  margin: 0 auto;
+
+  border: none;
+
   border-radius: 12px;
+
+  background: #0071E3;
+
+  color: #FFFFFF;
+
+  font-size: 16px;
+  font-weight: 600;
+
+  cursor: pointer;
 }
 
 .btn-login .icone-entrar {
@@ -136,13 +147,6 @@ iframe {
   gap: 10px;
 }
     
-.login-card {
-  width: 520px;
-  max-width: calc(100% - 32px);
-  padding: 48px;
-  border-radius: 16px;
-}
-    
 .login-card .logo-directv-titulo {
   width: 80px !important;
   height: auto !important;
@@ -240,12 +244,7 @@ iframe {
 <body>
 
 
-<div id="header-bars">
-  <div class="barra-escura"></div>
-  <div class="barra-clara">
-    <img src="imagenes/icon_gpt_cinza.png" alt="Ícone GPT">
-  </div>
-</div>
+
 
   <div id="loginOverlay" class="login-overlay">
 
@@ -269,7 +268,7 @@ iframe {
       onclick="login()"
       disabled>
 
-      imagenes/icon_entrar.png
+      <img src="imagenes/icon_entrar.png">
 
       <span>Entrar</span>
 
@@ -284,7 +283,14 @@ iframe {
 </div>
 
 <div id="appContent" class="app-locked">
-
+  
+<div id="header-bars">
+  <div class="barra-escura"></div>
+  <div class="barra-clara">
+    <img src="imagenes/icon_gpt_cinza.png" alt="Ícone GPT">
+  </div>
+</div>
+  
 <div id="content">
 
     <div id="topbar">
@@ -299,9 +305,18 @@ iframe {
 <script>
 
 function showContent() {
-  document.getElementById("login-screen").style.display = "none";
-  document.getElementById("header-bars").style.display = "none";
-  document.getElementById("content").style.display = "block";
+
+  document
+    .getElementById("loginOverlay")
+    .classList.add("hidden");
+
+  document
+    .getElementById("appContent")
+    .classList.remove("app-locked");
+
+  document
+    .getElementById("content")
+    .style.display = "block";
 }
     
     // =====================================================================
@@ -383,10 +398,18 @@ function setDocument(docKey) {
     }
 
 function showLogin() {
-  document.getElementById("login-screen").style.display = "flex";
-  document.getElementById("header-bars").style.display = "block";
-  document.getElementById("content").style.display = "none";
-  document.getElementById("btnLogin").disabled = false;
+
+  document
+    .getElementById("loginOverlay")
+    .classList.remove("hidden");
+
+  document
+    .getElementById("appContent")
+    .classList.add("app-locked");
+
+  document
+    .getElementById("btnLogin")
+    .disabled = false;
 }
 
     function getBestAccount() {
