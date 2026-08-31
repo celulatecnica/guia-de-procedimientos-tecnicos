@@ -157,7 +157,7 @@ iframe {
   <!-- CONTEÚDO PRINCIPAL -->
   <div id="appContent" class="app-locked">
     <div id="topbar">
-      <button id="btnLogout" onclick="logout()">Sair</button>
+      <button id="btnLogout" onclick="logout()">Salir</button>
     </div>
    <iframe id="docFrame"></iframe>
   </div>
@@ -173,9 +173,9 @@ iframe {
         Inicia sesión con tu cuenta corporativa para aceder a los manuales de atención técnica.
       </p>
       <button id="btnLogin" class="btn-login" onclick="login()" disabled>
-        <span>Entrar</span>
+        <span>Iniciar sesión</span>
       </button>
-      <div id="status" class="status">Carregando autenticação...</div>
+      <div id="status" class="status">Cargando la autenticación...</div>
     </div>
   </div>
 
@@ -255,7 +255,7 @@ iframe {
 
     showLoginOverlay();
 
-    setStatus("Pronto para autenticar.");
+    setStatus("Listo para iniciar sesión.");
 
     return;
   }
@@ -267,10 +267,10 @@ iframe {
 
     async function initializeMsal() {
       try {
-        setStatus("Carregando autenticação...");
+        setStatus("Cargando autenticación...");
         document.getElementById("btnLogin").disabled = true;
         if (typeof msal === "undefined") {
-          setStatus("MSAL não carregou.");
+          setStatus("MSAL no se cargó.");
           console.error("msal undefined");
           document.getElementById("btnLogin").disabled = false;
           return;
@@ -282,8 +282,8 @@ iframe {
         await msalInstance.handleRedirectPromise();
         await enforceAuthAndLoadDoc();
       } catch (error) {
-        console.error("Erro ao inicializar MSAL:", error);
-        setStatus("Erro ao inicializar a autenticação.");
+        console.error("Error al iniciar MSAL:", error);
+        setStatus("Error al iniciar la autenticación.");
         showLoginOverlay();
       }
     }
@@ -291,11 +291,11 @@ iframe {
     async function login() {
       try {
         if (!msalInstance) {
-          alert("MSAL ainda não foi inicializado.");
+          alert("MSAL aún no se ha iniciado.");
           return;
         }
         document.getElementById("btnLogin").disabled = true;
-        setStatus("Abrindo login da Microsoft...");
+        setStatus("Abriendo sesión de Microsoft...");
         msalInstance.setActiveAccount(null);
         const res = await msalInstance.loginPopup({
           ...loginRequest,
@@ -306,9 +306,9 @@ iframe {
         }
         await enforceAuthAndLoadDoc();
       } catch (error) {
-        console.error("Erro no login:", error);
-        setStatus("Falha na autenticação.");
-        alert("Não foi possível realizar a autenticação.");
+        console.error("Error al iniciar sesión:", error);
+        setStatus("Fallo en la autenticación.");
+        alert("No se pudo realizar la autenticación.");
         document.getElementById("btnLogin").disabled = false;
       }
     }
@@ -321,9 +321,9 @@ iframe {
         }
         msalInstance.setActiveAccount(null);
         showLoginOverlay();
-        setStatus("Sessão encerrada. Faça login novamente.");
+        setStatus("Sesión cerrada. Vuelve a iniciar sesión.");
       } catch (error) {
-        console.error("Erro ao sair:", error);
+        console.error("Error al cerrar sesión:", error);
       }
     }
 
