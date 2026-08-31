@@ -187,55 +187,93 @@
   </div>
   <script>
     // =====================================================================
-    // MSAL CONFIG
+    // CONSTANTES Y CONFIGURACIÓN
     // =====================================================================
     const redirectUri = window.location.origin + window.location.pathname;
+    
     const msalConfig = {
       auth: {
         clientId: "bd3d9316-4683-4aea-ad47-8c237cdceb5e",
         authority: "https://login.microsoftonline.com/4abdf8c8-91c3-4c1b-9c71-6266b586ec6b",
-        redirectUri
+        redirectUri: redirectUri
       },
       cache: {
-        cacheLocation: "sessionStorage",
+        cacheLocation: "localStorage", // 🔧 MUDADO PARA localStorage PARA PERSISTÊNCIA
         storeAuthStateInCookie: false
+      },
+      system: {
+        loggerOptions: {
+          loggerCallback: (level, message, containsPii) => {
+            if (!containsPii) {
+              console.log(`[MSAL ${level}] ${message}`);
+            }
+          },
+          piiLoggingEnabled: false,
+          logLevel: msal.LogLevel.Warning
+        }
       }
     };
+    
     const loginRequest = {
       scopes: ["openid", "profile", "email", "User.Read"]
     };
     
+    // =====================================================================
+    // ESTADO GLOBAL
+    // =====================================================================
     let msalInstance = null;
-    let isProcessingRedirect = false;
-    let isMsalInitialized = false;
+    let isInitialized = false;
+    let isLoginInProgress = false;
+    let authStateKey = "auth_state_processed"; // 🔧 CHAVE PARA RASTREAR PROCESSAMENTO
 
     // =====================================================================
-    // FUNÇÕES AUXILIARES
+    // FUNÇÕES AUXILIARES DE CACHE
     // =====================================================================
     
-    // 🔧 LIMPA CACHE DO MSAL
+    function markAuthStateAsProcessed() {
+      sessionStorage.setItem(authStateKey, "true");
+      console.log("✓ Estado de autenticação marcado como processado");
+    }
+
+    function isAuthStateAlreadyProcessed() {
+      return sessionStorage.getItem(authStateKey) === "true";
+    }
+
+    function resetAuthStateFlag() {
+      sessionStorage.removeItem(authStateKey);
+      console.log("✓ Flag de estado de autenticação removida");
+    }
+
     function clearMsalCache() {
       try {
-        if (sessionStorage) {
-          // Remove tokens específicos do MSAL
-          const keysToRemove = [];
-          for (let i = 0; i < sessionStorage.length; i++) {
-            const key = sessionStorage.key(i);
-            if (key && (
-              key.includes("msal.") ||
-              key.includes("login.windows.net") ||
-              key.includes("microsoftonline.com") ||
-              key.includes("state-") ||
-              key.includes("nonce-")
-            )) {
-              keysToRemove.push(key);
-            }
+        // 🔧 LIMPA APENAS OS TOKENS, NÃO O ESTADO
+        const cacheKeys = [
+          "login.windows.net",
+          "microsoftonline.com",
+          "msal.request.scopes",
+          "msal.interaction.status"
+        ];
+
+        for (let key in localStorage) {
+          if (cacheKeys.some(k => key.includes(k))) {
+            localStorage.removeItem(key);
           }
-          keysToRemove.forEach(key => sessionStorage.removeItem(key));
-          console.log(`Limpas ${keysToRemove.length} chaves de cache`);
         }
+        
+        console.log("✓ Cache do MSAL limpo");
       } catch (error) {
         console.error("Erro ao limpar cache:", error);
+      }
+    }
+
+    function getAllTokens() {
+      console.log("=== TOKENS ATUAIS ===");
+      if (msalInstance) {
+        const accounts = msalInstance.getAllAccounts();
+        console.log(`Contas encontradas: ${accounts.length}`);
+        accounts.forEach((acc, idx) => {
+          console.log(`[${idx}] ${acc.username}`);
+        });
       }
     }
 
@@ -259,16 +297,21 @@
     }
     
     // =====================================================================
-    // AUTENTICAÇÃO
+    // FUNÇÕES DE AUTENTICAÇÃO
     // =====================================================================
     function getBestAccount() {
       if (!msalInstance) return null;
-      return msalInstance.getActiveAccount() || msalInstance.getAllAccounts()[0] || null;
+      const activeAccount = msalInstance.getActiveAccount();
+      if (activeAccount) return activeAccount;
+      
+      const allAccounts = msalInstance.getAllAccounts();
+      return allAccounts.length > 0 ? allAccounts[0] : null;
     }
     
-    function atualizarUsuarioLogado() {
+    function updateUserDisplay() {
       const email = document.getElementById("userEmail");
       if (!email) return;
+      
       const account = getBestAccount();
       if (!account) {
         email.textContent = "";
@@ -282,82 +325,98 @@
       return params.get("doc") || "gpt";
     }
     
-    function setDocument(docKey) {
+    function loadDocument(docKey) {
       const frame = document.getElementById("docFrame");
       let pdfFile;
+      
       if (docKey === "gpt") {
         pdfFile = "gpt.pdf";
       } else {
         pdfFile = `gpt_${docKey}.pdf`;
       }
+      
       frame.src = `archivos_pdf/${pdfFile}#view=FitH`;
+      console.log(`📄 Documento carregado: ${pdfFile}`);
     }
     
-    async function enforceAuthAndLoadDoc() {
+    // =====================================================================
+    // LÓGICA DE FLUXO
+    // =====================================================================
+    
+    async function checkAuthStatus() {
+      console.log("🔍 Verificando status de autenticação...");
       const docKey = getRequestedDocKey();
-      setDocument(docKey);
+      loadDocument(docKey);
+      
       const account = getBestAccount();
       
       if (!account) {
+        console.log("❌ Usuário não autenticado");
         showLoginOverlay();
         setStatus("Listo para iniciar sesión.");
         return;
       }
       
+      console.log(`✓ Usuário autenticado: ${account.username}`);
       msalInstance.setActiveAccount(account);
-      atualizarUsuarioLogado();
+      updateUserDisplay();
       hideLoginOverlay();
     }
     
-    async function initializeMsal() {
-      if (isMsalInitialized) {
-        console.log("MSAL já foi inicializado");
+    async function initMsal() {
+      if (isInitialized) {
+        console.log("⚠ MSAL já foi inicializado");
         return;
       }
       
       try {
-        setStatus("Cargando autenticación...");
+        console.log("🚀 Inicializando MSAL...");
+        setStatus("Cargando la autenticación...");
         document.getElementById("btnLogin").disabled = true;
         
         if (typeof msal === "undefined") {
-          setStatus("MSAL no se cargó.");
-          console.error("msal undefined");
-          document.getElementById("btnLogin").disabled = false;
-          return;
+          throw new Error("MSAL library não foi carregada");
         }
         
         msalInstance = new msal.PublicClientApplication(msalConfig);
         
         if (typeof msalInstance.initialize === "function") {
           await msalInstance.initialize();
+          console.log("✓ MSAL inicializado com sucesso");
         }
         
-        isProcessingRedirect = true;
-        
-        try {
-          const response = await msalInstance.handleRedirectPromise();
-          
-          if (response) {
-            console.log("Retorno de redirecionamiento detectado");
-            if (response.account) {
-              msalInstance.setActiveAccount(response.account);
+        // 🔧 PROCESSA REDIRECT APENAS UMA VEZ
+        if (!isAuthStateAlreadyProcessed()) {
+          console.log("⏳ Processando handleRedirectPromise...");
+          try {
+            const response = await msalInstance.handleRedirectPromise();
+            
+            if (response) {
+              console.log("✓ Retorno do redirect detectado");
+              if (response.account) {
+                msalInstance.setActiveAccount(response.account);
+                console.log(`✓ Conta ativa definida: ${response.account.username}`);
+              }
+            } else {
+              console.log("ℹ Nenhum redirect pendente");
             }
+          } catch (redirectError) {
+            console.error("❌ Erro no redirect:", redirectError);
           }
-        } catch (redirectError) {
-          console.error("Error procesando redirect:", redirectError);
-        } finally {
-          isProcessingRedirect = false;
+          
+          // 🔧 MARCA COMO PROCESSADO APÓS PRIMEIRA EXECUÇÃO
+          markAuthStateAsProcessed();
+        } else {
+          console.log("⏭ Redirect já foi processado, pulando...");
         }
         
-        isMsalInitialized = true;
-        await enforceAuthAndLoadDoc();
+        isInitialized = true;
+        await checkAuthStatus();
         
       } catch (error) {
-        isProcessingRedirect = false;
-        console.error("Error al iniciar MSAL:", error);
+        console.error("❌ Erro ao inicializar MSAL:", error);
         setStatus("Error al iniciar la autenticación.");
         showLoginOverlay();
-        document.getElementById("btnLogin").disabled = false;
       }
     }
     
@@ -368,85 +427,92 @@
           return;
         }
         
-        if (isProcessingRedirect) {
-          console.log("Ya hay un login en proceso");
+        if (isLoginInProgress) {
+          console.log("⚠ Login já está em progresso");
           return;
         }
         
+        isLoginInProgress = true;
         document.getElementById("btnLogin").disabled = true;
         setStatus("Abriendo sesión de Microsoft...");
         
-        isProcessingRedirect = true;
+        console.log("🔐 Iniciando login popup...");
         
         try {
-          // 🔧 LIMPA TODAS AS CONTAS ANTES DE NOVO LOGIN
+          // 🔧 LIMPA ACCOUNTS ANTIGAS
           const allAccounts = msalInstance.getAllAccounts();
-          console.log(`Removiendo ${allAccounts.length} contas existentes`);
+          console.log(`Removendo ${allAccounts.length} contas antigas`);
           
           for (let account of allAccounts) {
             await msalInstance.getTokenCache().removeAccount(account);
           }
           
           msalInstance.setActiveAccount(null);
+          getAllTokens();
           
-          // 🔧 LIMPA O CACHE DE SESSÃO
-          clearMsalCache();
+          // 🔧 LIMPA A FLAG PARA PERMITIR NOVO PROCESSAMENTO
+          resetAuthStateFlag();
           
-          const res = await msalInstance.loginPopup({
+          const response = await msalInstance.loginPopup({
             ...loginRequest,
             prompt: "select_account",
             timeout: 60000
           });
           
-          if (res && res.account) {
-            msalInstance.setActiveAccount(res.account);
-            console.log("Login exitoso:", res.account.username);
+          if (response && response.account) {
+            console.log(`✓ Login bem-sucedido: ${response.account.username}`);
+            msalInstance.setActiveAccount(response.account);
+            
+            // 🔧 MARCA COMO PROCESSADO APÓS LOGIN COM SUCESSO
+            markAuthStateAsProcessed();
           }
           
-          isProcessingRedirect = false;
-          await enforceAuthAndLoadDoc();
+          isLoginInProgress = false;
+          await checkAuthStatus();
           
         } catch (popupError) {
-          isProcessingRedirect = false;
+          isLoginInProgress = false;
           
           if (popupError.errorCode === "user_cancelled") {
-            console.log("Usuario canceló el login");
+            console.log("ℹ Usuário cancelou o login");
             setStatus("Login cancelado. Intenta nuevamente.");
-            document.getElementById("btnLogin").disabled = false;
+          } else if (popupError.errorCode === "interaction_in_progress") {
+            console.log("⚠ Interação já em progresso");
+            setStatus("Ya hay una sesión en progreso...");
           } else {
-            console.error("Error en popup:", popupError);
-            setStatus("Fallo en la autenticación.");
-            document.getElementById("btnLogin").disabled = false;
+            console.error("❌ Erro no popup:", popupError);
+            setStatus(`Fallo: ${popupError.errorCode}`);
           }
+          
+          document.getElementById("btnLogin").disabled = false;
         }
         
       } catch (error) {
-        isProcessingRedirect = false;
-        console.error("Error al iniciar sesión:", error);
+        isLoginInProgress = false;
+        console.error("❌ Erro geral no login:", error);
         setStatus("Fallo en la autenticación.");
-        alert("No se pudo realizar la autenticación.");
         document.getElementById("btnLogin").disabled = false;
       }
     }
     
     async function logout() {
       try {
+        console.log("🔓 Iniciando logout...");
         document.getElementById("btnLogin").disabled = true;
         setStatus("Cerrando sesión...");
         
         const account = getBestAccount();
         
-        // 🔧 PRIMEIRO FAZ LOGOUT NO MSAL
         if (account) {
           try {
+            console.log(`Logout da conta: ${account.username}`);
             await msalInstance.logoutPopup({ account });
-          } catch (logoutError) {
-            console.error("Error en logout popup:", logoutError);
-            // Continua mesmo se houver erro
+          } catch (popupError) {
+            console.error("⚠ Erro no logout popup:", popupError);
           }
         }
         
-        // 🔧 DEPOIS REMOVE TODAS AS CONTAS E LIMPA CACHE
+        // 🔧 LIMPA TODAS AS CONTAS
         const allAccounts = msalInstance.getAllAccounts();
         for (let acc of allAccounts) {
           await msalInstance.getTokenCache().removeAccount(acc);
@@ -455,25 +521,24 @@
         msalInstance.setActiveAccount(null);
         document.getElementById("userEmail").textContent = "";
         
-        // 🔧 FORÇA LIMPEZA DO CACHE
+        // 🔧 FORÇA REINICIALIZAÇÃO
+        isInitialized = false;
+        resetAuthStateFlag();
         clearMsalCache();
         
-        // 🔧 REINICIALIZA O MSAL
-        isMsalInitialized = false;
-        
+        console.log("✓ Logout completo");
         showLoginOverlay();
         setStatus("Sesión cerrada. Vuelve a iniciar sesión.");
         
-        // 🔧 AGUARDA UM POUCO E REINICIALIZA
+        // 🔧 REINICIA MSAL APÓS LOGOUT
         setTimeout(() => {
-          initializeMsal();
+          initMsal();
         }, 500);
         
       } catch (error) {
-        console.error("Error ao cerrar sesión:", error);
-        showLoginOverlay();
+        console.error("❌ Erro no logout:", error);
         document.getElementById("btnLogin").disabled = false;
-        setStatus("Erro ao sair. Tente novamente.");
+        setStatus("Error al cerrar sesión.");
       }
     }
     
@@ -481,21 +546,30 @@
     // EVENT LISTENERS
     // =====================================================================
     window.addEventListener("focus", () => {
-      if (msalInstance && !isProcessingRedirect && isMsalInitialized) {
-        enforceAuthAndLoadDoc().catch(console.error);
+      if (isInitialized && !isLoginInProgress) {
+        console.log("🔄 Janela em foco, verificando autenticação...");
+        checkAuthStatus().catch(console.error);
       }
     });
     
     window.addEventListener("popstate", () => {
-      if (msalInstance && !isProcessingRedirect && isMsalInitialized) {
-        enforceAuthAndLoadDoc().catch(console.error);
+      if (isInitialized && !isLoginInProgress) {
+        console.log("🔄 Navegação detectada, verificando autenticação...");
+        checkAuthStatus().catch(console.error);
       }
     });
     
     window.addEventListener("load", () => {
-      const docKey = getRequestedDocKey();
-      setDocument(docKey);
-      initializeMsal();
+      console.log("📍 Página carregada");
+      initMsal();
+    });
+    
+    // 🔧 PREVINE RELOAD ACIDENTAL
+    window.addEventListener("beforeunload", (e) => {
+      if (isLoginInProgress) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
     });
   </script>
 </body>
