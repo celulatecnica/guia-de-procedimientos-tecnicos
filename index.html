@@ -73,6 +73,12 @@ body {
 #btnLogout:hover {
   background: #0077ED;
 }
+#userEmail {
+  color: #FFFFFF;
+  font-size: 14px;
+  font-weight: 500;
+  opacity: .9;
+}
 iframe {
   width: 100%;
   height: 100vh;
@@ -157,8 +163,14 @@ iframe {
   <!-- CONTEÚDO PRINCIPAL -->
   <div id="appContent" class="app-locked">
     <div id="topbar">
-      <button id="btnLogout" onclick="logout()">Salir</button>
-    </div>
+
+  <span id="userEmail"></span>
+
+  <button id="btnLogout" onclick="logout()">
+    Salir
+  </button>
+
+</div>
    <iframe id="docFrame"></iframe>
   </div>
 
@@ -227,6 +239,25 @@ iframe {
       return msalInstance.getActiveAccount() || msalInstance.getAllAccounts()[0] || null;
     }
 
+    function atualizarUsuarioLogado() {
+
+  const email = document.getElementById("userEmail");
+
+  if (!email) return;
+
+  const account = getBestAccount();
+
+  if (!account) {
+    email.textContent = "";
+    return;
+  }
+
+  email.textContent =
+    account.username ||
+    account.name ||
+    "";
+}
+    
     function getRequestedDocKey() {
       const params = new URLSearchParams(window.location.search);
       return params.get("doc") || "gpt";
@@ -260,9 +291,11 @@ iframe {
     return;
   }
 
-  msalInstance.setActiveAccount(account);
+msalInstance.setActiveAccount(account);
 
-  hideLoginOverlay();
+atualizarUsuarioLogado();
+
+hideLoginOverlay();
 }
 
     async function initializeMsal() {
@@ -319,8 +352,11 @@ iframe {
         if (account) {
           await msalInstance.logoutPopup({ account });
         }
-        msalInstance.setActiveAccount(null);
-        showLoginOverlay();
+msalInstance.setActiveAccount(null);
+
+document.getElementById("userEmail").textContent = "";
+
+showLoginOverlay();
         setStatus("Sesión cerrada. Vuelve a iniciar sesión.");
       } catch (error) {
         console.error("Error al cerrar sesión:", error);
