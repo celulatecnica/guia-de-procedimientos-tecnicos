@@ -345,6 +345,60 @@
         log("INIT", "Processando handleRedirectPromise()...");
         const response = await msalInstance.handleRedirectPromise();
 
+        async function initializeMsal() {
+  if (isInitialized) {
+    log("INIT", "MSAL já foi inicializado");
+    return;
+  }
+
+  isProcessing = true;
+
+  try {
+    log("INIT", "Iniciando MSAL...");
+    setStatus("Inicializando autenticación...");
+    document.getElementById("btnLogin").disabled = true;
+
+    if (typeof msal === "undefined") {
+      throw new Error("MSAL library não foi carregada");
+    }
+
+    msalInstance = new msal.PublicClientApplication(msalConfig);
+    log("INIT", "Instância criada");
+
+    if (typeof msalInstance.initialize === "function") {
+      await msalInstance.initialize();
+      log("INIT", "MSAL.initialize() executado");
+    }
+
+    // 🔧 PROCESSA REDIRECT DO MICROSOFT
+    log("INIT", "Processando handleRedirectPromise()...");
+    const response = await msalInstance.handleRedirectPromise();
+
+    // 🔧 REMOVE FLAG DE REDIRECIONAMENTO
+    localStorage.removeItem("msal_redirecting");
+
+    if (response) {
+      log("INIT", `✓ Login bem-sucedido após redirect: ${response.account.username}`);
+      msalInstance.setActiveAccount(response.account);
+    } else {
+      log("INIT", "Nenhum redirect pendente");
+    }
+
+    isInitialized = true;
+    isProcessing = false;
+
+    // Verifica se está autenticado
+    await checkAndDisplayAuth();
+
+  } catch (error) {
+    logError("INIT", error);
+    localStorage.removeItem("msal_redirecting");
+    isProcessing = false;
+    setStatus("Error ao inicializar a autenticación.");
+    showLoginOverlay();
+  }
+}
+        
         if (response) {
           log("INIT", `✓ Login bem-sucedido após redirect: ${response.account.username}`);
           msalInstance.setActiveAccount(response.account);
@@ -406,30 +460,28 @@
   setStatus("Abriendo sesión de Microsoft...");
 
   try {
-    log("LOGIN", "Iniciando loginPopup()...");
+    log("LOGIN", "Iniciando loginRedirect()...");
 
     // 🔧 LIMPA CONTAS ANTIGAS
     await clearAllAccounts();
 
-    // 🔧 USA POPUP EM VEZ DE REDIRECT (SEM POP-UP DE CONFIRMAÇÃO)
-    const response = await msalInstance.loginPopup({
+    // 🔧 MARCA NO localStorage QUE ESTÁ REDIRECIONANDO
+    localStorage.setItem("msal_redirecting", "true");
+
+    // 🔧 USA REDIRECT SEM POPUP
+    await msalInstance.loginRedirect({
       ...loginRequest,
       prompt: "select_account"
     });
 
-    if (response && response.account) {
-      log("LOGIN", `✓ Login bem-sucedido: ${response.account.username}`);
-      msalInstance.setActiveAccount(response.account);
-      
-      // Vai direto para a próxima página
-      await checkAndDisplayAuth();
-    }
-
-    isProcessing = false;
+    // Se chegou aqui, o redirect foi iniciado
+    log("LOGIN", "Redirecionamento para Microsoft iniciado...");
+    setStatus("Redirecionando a Microsoft...");
 
   } catch (error) {
     logError("LOGIN", error);
     isProcessing = false;
+    localStorage.removeItem("msal_redirecting");
 
     if (error.errorCode === "user_cancelled") {
       log("LOGIN", "Usuário cancelou o login");
