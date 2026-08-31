@@ -80,7 +80,7 @@ iframe {
   display: block;
 }
 .app-locked {
-  filter: blur(12px);
+  filter: blur(8px);
   pointer-events: none;
   user-select: none;
   transition: filter 0.3s ease;
@@ -97,7 +97,8 @@ iframe {
   display: flex;
   justify-content: center;
   align-items: center;
-  background: rgba(0, 0, 0, 0.45);
+
+  background: rgba(0, 0, 0, 0.20);
 }
 .login-overlay.hidden {
   display: none;
@@ -157,7 +158,7 @@ iframe {
     <div id="topbar">
       <button id="btnLogout" onclick="logout()">Sair</button>
     </div>
-    <iframe id="docFrame" src="about:blank"></iframe>
+   <iframe id="docFrame"></iframe>
   </div>
 
   <!-- OVERLAY DE LOGIN -->
@@ -242,17 +243,26 @@ iframe {
     }
 
     async function enforceAuthAndLoadDoc() {
-      const account = getBestAccount();
-      if (!account) {
-        showLoginOverlay();
-        setStatus("Pronto para autenticar.");
-        return;
-      }
-      msalInstance.setActiveAccount(account);
-      hideLoginOverlay();
-      const docKey = getRequestedDocKey();
-      setDocument(docKey);
-    }
+
+  const docKey = getRequestedDocKey();
+
+  setDocument(docKey);
+
+  const account = getBestAccount();
+
+  if (!account) {
+
+    showLoginOverlay();
+
+    setStatus("Pronto para autenticar.");
+
+    return;
+  }
+
+  msalInstance.setActiveAccount(account);
+
+  hideLoginOverlay();
+}
 
     async function initializeMsal() {
       try {
@@ -325,7 +335,15 @@ iframe {
     window.addEventListener("popstate", () => {
       if (msalInstance) enforceAuthAndLoadDoc().catch(console.error);
     });
-    window.addEventListener("load", initializeMsal);
+    window.addEventListener("load", () => {
+
+  const docKey = getRequestedDocKey();
+
+  setDocument(docKey);
+
+  initializeMsal();
+
+});
   </script>
 </body>
 </html>
