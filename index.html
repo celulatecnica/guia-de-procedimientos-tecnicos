@@ -179,15 +179,32 @@
       <p class="login-description">
         Inicia sesión con tu cuenta corporativa para aceder a los manuales de atención técnica.
       </p>
-      <button id="btnLogin" class="btn-login" onclick="login()" disabled>
+      <button id="btnLogin" class="btn-login" onclick="handleLogin()" disabled>
         <span>Iniciar sesión</span>
       </button>
       <div id="status" class="status">Cargando la autenticación...</div>
     </div>
   </div>
+
   <script>
     // =====================================================================
-    // CONSTANTES Y CONFIGURACIÓN
+    // DEBUG HELPER
+    // =====================================================================
+    const DEBUG = true;
+    function log(label, message) {
+      if (DEBUG) {
+        console.log(`[${new Date().toLocaleTimeString()}] ${label}: ${message}`);
+      }
+    }
+
+    function logError(label, error) {
+      if (DEBUG) {
+        console.error(`[${new Date().toLocaleTimeString()}] ${label}:`, error);
+      }
+    }
+
+    // =====================================================================
+    // CONFIGURAÇÃO MSAL
     // =====================================================================
     const redirectUri = window.location.origin + window.location.pathname;
     
@@ -195,382 +212,303 @@
       auth: {
         clientId: "bd3d9316-4683-4aea-ad47-8c237cdceb5e",
         authority: "https://login.microsoftonline.com/4abdf8c8-91c3-4c1b-9c71-6266b586ec6b",
-        redirectUri: redirectUri
+        redirectUri: redirectUri,
+        postLogoutRedirectUri: redirectUri
       },
       cache: {
-        cacheLocation: "localStorage", // 🔧 MUDADO PARA localStorage PARA PERSISTÊNCIA
+        cacheLocation: "localStorage",
         storeAuthStateInCookie: false
-      },
-      system: {
-        loggerOptions: {
-          loggerCallback: (level, message, containsPii) => {
-            if (!containsPii) {
-              console.log(`[MSAL ${level}] ${message}`);
-            }
-          },
-          piiLoggingEnabled: false,
-          logLevel: msal.LogLevel.Warning
-        }
       }
     };
-    
+
     const loginRequest = {
       scopes: ["openid", "profile", "email", "User.Read"]
     };
-    
+
     // =====================================================================
     // ESTADO GLOBAL
     // =====================================================================
     let msalInstance = null;
     let isInitialized = false;
-    let isLoginInProgress = false;
-    let authStateKey = "auth_state_processed"; // 🔧 CHAVE PARA RASTREAR PROCESSAMENTO
+    let isProcessing = false;
 
     // =====================================================================
-    // FUNÇÕES AUXILIARES DE CACHE
+    // UTILITY FUNCTIONS
     // =====================================================================
     
-    function markAuthStateAsProcessed() {
-      sessionStorage.setItem(authStateKey, "true");
-      console.log("✓ Estado de autenticação marcado como processado");
-    }
-
-    function isAuthStateAlreadyProcessed() {
-      return sessionStorage.getItem(authStateKey) === "true";
-    }
-
-    function resetAuthStateFlag() {
-      sessionStorage.removeItem(authStateKey);
-      console.log("✓ Flag de estado de autenticação removida");
-    }
-
-    function clearMsalCache() {
-      try {
-        // 🔧 LIMPA APENAS OS TOKENS, NÃO O ESTADO
-        const cacheKeys = [
-          "login.windows.net",
-          "microsoftonline.com",
-          "msal.request.scopes",
-          "msal.interaction.status"
-        ];
-
-        for (let key in localStorage) {
-          if (cacheKeys.some(k => key.includes(k))) {
-            localStorage.removeItem(key);
-          }
-        }
-        
-        console.log("✓ Cache do MSAL limpo");
-      } catch (error) {
-        console.error("Erro ao limpar cache:", error);
-      }
-    }
-
-    function getAllTokens() {
-      console.log("=== TOKENS ATUAIS ===");
-      if (msalInstance) {
-        const accounts = msalInstance.getAllAccounts();
-        console.log(`Contas encontradas: ${accounts.length}`);
-        accounts.forEach((acc, idx) => {
-          console.log(`[${idx}] ${acc.username}`);
-        });
-      }
-    }
-
-    // =====================================================================
-    // FUNÇÕES DE UI
-    // =====================================================================
     function setStatus(text) {
       const el = document.getElementById("status");
       if (el) el.textContent = text;
+      log("STATUS", text);
     }
-    
+
     function showLoginOverlay() {
       document.getElementById("loginOverlay").classList.remove("hidden");
       document.getElementById("appContent").classList.add("app-locked");
       document.getElementById("btnLogin").disabled = false;
     }
-    
+
     function hideLoginOverlay() {
       document.getElementById("loginOverlay").classList.add("hidden");
       document.getElementById("appContent").classList.remove("app-locked");
     }
-    
-    // =====================================================================
-    // FUNÇÕES DE AUTENTICAÇÃO
-    // =====================================================================
-    function getBestAccount() {
-      if (!msalInstance) return null;
-      const activeAccount = msalInstance.getActiveAccount();
-      if (activeAccount) return activeAccount;
-      
-      const allAccounts = msalInstance.getAllAccounts();
-      return allAccounts.length > 0 ? allAccounts[0] : null;
-    }
-    
-    function updateUserDisplay() {
-      const email = document.getElementById("userEmail");
-      if (!email) return;
-      
-      const account = getBestAccount();
-      if (!account) {
-        email.textContent = "";
-        return;
-      }
-      email.textContent = account.username || account.name || "";
-    }
-    
+
     function getRequestedDocKey() {
       const params = new URLSearchParams(window.location.search);
       return params.get("doc") || "gpt";
     }
-    
+
     function loadDocument(docKey) {
       const frame = document.getElementById("docFrame");
-      let pdfFile;
+      let pdfFile = docKey === "gpt" ? "gpt.pdf" : `gpt_${docKey}.pdf`;
+      frame.src = `archivos_pdf/${pdfFile}#view=FitH`;
+      log("DOC", `Documento carregado: ${pdfFile}`);
+    }
+
+    // =====================================================================
+    // GESTÃO DE CONTAS
+    // =====================================================================
+    
+    function getActiveAccount() {
+      if (!msalInstance) return null;
       
-      if (docKey === "gpt") {
-        pdfFile = "gpt.pdf";
-      } else {
-        pdfFile = `gpt_${docKey}.pdf`;
+      const activeAccount = msalInstance.getActiveAccount();
+      if (activeAccount) {
+        log("ACCOUNT", `Conta ativa: ${activeAccount.username}`);
+        return activeAccount;
+      }
+
+      const allAccounts = msalInstance.getAllAccounts();
+      log("ACCOUNT", `Total de contas: ${allAccounts.length}`);
+      
+      if (allAccounts.length > 0) {
+        log("ACCOUNT", `Usando primeira conta: ${allAccounts[0].username}`);
+        return allAccounts[0];
+      }
+
+      return null;
+    }
+
+    function updateUserDisplay() {
+      const email = document.getElementById("userEmail");
+      const account = getActiveAccount();
+      email.textContent = account ? (account.username || account.name || "") : "";
+    }
+
+    async function clearAllAccounts() {
+      if (!msalInstance) return;
+      
+      const allAccounts = msalInstance.getAllAccounts();
+      log("CLEAR", `Removendo ${allAccounts.length} contas`);
+      
+      for (let account of allAccounts) {
+        try {
+          await msalInstance.getTokenCache().removeAccount(account);
+        } catch (e) {
+          logError("CLEAR", e);
+        }
       }
       
-      frame.src = `archivos_pdf/${pdfFile}#view=FitH`;
-      console.log(`📄 Documento carregado: ${pdfFile}`);
+      msalInstance.setActiveAccount(null);
     }
-    
+
     // =====================================================================
-    // LÓGICA DE FLUXO
+    // INICIALIZAÇÃO
     // =====================================================================
     
-    async function checkAuthStatus() {
-      console.log("🔍 Verificando status de autenticação...");
+    async function initializeMsal() {
+      if (isInitialized) {
+        log("INIT", "MSAL já foi inicializado");
+        return;
+      }
+
+      isProcessing = true;
+
+      try {
+        log("INIT", "Iniciando MSAL...");
+        setStatus("Inicializando autenticación...");
+        document.getElementById("btnLogin").disabled = true;
+
+        if (typeof msal === "undefined") {
+          throw new Error("MSAL library não foi carregada");
+        }
+
+        msalInstance = new msal.PublicClientApplication(msalConfig);
+        log("INIT", "Instância criada");
+
+        if (typeof msalInstance.initialize === "function") {
+          await msalInstance.initialize();
+          log("INIT", "MSAL.initialize() executado");
+        }
+
+        // 🔧 PROCESSA REDIRECT DO MICROSOFT
+        log("INIT", "Processando handleRedirectPromise()...");
+        const response = await msalInstance.handleRedirectPromise();
+
+        if (response) {
+          log("INIT", `✓ Login bem-sucedido após redirect: ${response.account.username}`);
+          msalInstance.setActiveAccount(response.account);
+        } else {
+          log("INIT", "Nenhum redirect pendente");
+        }
+
+        isInitialized = true;
+        isProcessing = false;
+
+        // Verifica se está autenticado
+        await checkAndDisplayAuth();
+
+      } catch (error) {
+        logError("INIT", error);
+        isProcessing = false;
+        setStatus("Error ao inicializar a autenticación.");
+        showLoginOverlay();
+      }
+    }
+
+    // =====================================================================
+    // VERIFICAÇÃO DE AUTENTICAÇÃO
+    // =====================================================================
+    
+    async function checkAndDisplayAuth() {
+      log("AUTH", "Verificando autenticação...");
+      
       const docKey = getRequestedDocKey();
       loadDocument(docKey);
-      
-      const account = getBestAccount();
-      
+
+      const account = getActiveAccount();
+
       if (!account) {
-        console.log("❌ Usuário não autenticado");
+        log("AUTH", "❌ Usuário não autenticado");
         showLoginOverlay();
         setStatus("Listo para iniciar sesión.");
         return;
       }
-      
-      console.log(`✓ Usuário autenticado: ${account.username}`);
+
+      log("AUTH", `✓ Usuário autenticado: ${account.username}`);
       msalInstance.setActiveAccount(account);
       updateUserDisplay();
       hideLoginOverlay();
     }
+
+    // =====================================================================
+    // LOGIN
+    // =====================================================================
     
-    async function initMsal() {
-      if (isInitialized) {
-        console.log("⚠ MSAL já foi inicializado");
+    async function handleLogin() {
+      if (isProcessing || !msalInstance) {
+        log("LOGIN", "⚠ Já há um processo em andamento ou MSAL não inicializado");
         return;
       }
-      
+
+      isProcessing = true;
+      document.getElementById("btnLogin").disabled = true;
+      setStatus("Abriendo sesión de Microsoft...");
+
       try {
-        console.log("🚀 Inicializando MSAL...");
-        setStatus("Cargando la autenticación...");
-        document.getElementById("btnLogin").disabled = true;
-        
-        if (typeof msal === "undefined") {
-          throw new Error("MSAL library não foi carregada");
-        }
-        
-        msalInstance = new msal.PublicClientApplication(msalConfig);
-        
-        if (typeof msalInstance.initialize === "function") {
-          await msalInstance.initialize();
-          console.log("✓ MSAL inicializado com sucesso");
-        }
-        
-        // 🔧 PROCESSA REDIRECT APENAS UMA VEZ
-        if (!isAuthStateAlreadyProcessed()) {
-          console.log("⏳ Processando handleRedirectPromise...");
-          try {
-            const response = await msalInstance.handleRedirectPromise();
-            
-            if (response) {
-              console.log("✓ Retorno do redirect detectado");
-              if (response.account) {
-                msalInstance.setActiveAccount(response.account);
-                console.log(`✓ Conta ativa definida: ${response.account.username}`);
-              }
-            } else {
-              console.log("ℹ Nenhum redirect pendente");
-            }
-          } catch (redirectError) {
-            console.error("❌ Erro no redirect:", redirectError);
-          }
-          
-          // 🔧 MARCA COMO PROCESSADO APÓS PRIMEIRA EXECUÇÃO
-          markAuthStateAsProcessed();
+        log("LOGIN", "Iniciando loginRedirect()...");
+
+        // 🔧 LIMPA CONTAS ANTIGAS
+        await clearAllAccounts();
+
+        // 🔧 USA REDIRECT EM VEZ DE POPUP
+        await msalInstance.loginRedirect({
+          ...loginRequest,
+          prompt: "select_account"
+        });
+
+        // Se chegou aqui, o redirect foi iniciado
+        log("LOGIN", "Redirecionamento para Microsoft iniciado...");
+        setStatus("Redirecionando a Microsoft...");
+
+      } catch (error) {
+        logError("LOGIN", error);
+        isProcessing = false;
+
+        if (error.errorCode === "user_cancelled") {
+          log("LOGIN", "Usuário cancelou o login");
+          setStatus("Login cancelado.");
         } else {
-          console.log("⏭ Redirect já foi processado, pulando...");
+          setStatus("Error en la autenticación.");
         }
-        
-        isInitialized = true;
-        await checkAuthStatus();
-        
-      } catch (error) {
-        console.error("❌ Erro ao inicializar MSAL:", error);
-        setStatus("Error al iniciar la autenticación.");
-        showLoginOverlay();
-      }
-    }
-    
-    async function login() {
-      try {
-        if (!msalInstance) {
-          alert("MSAL aún no se ha iniciado.");
-          return;
-        }
-        
-        if (isLoginInProgress) {
-          console.log("⚠ Login já está em progresso");
-          return;
-        }
-        
-        isLoginInProgress = true;
-        document.getElementById("btnLogin").disabled = true;
-        setStatus("Abriendo sesión de Microsoft...");
-        
-        console.log("🔐 Iniciando login popup...");
-        
-        try {
-          // 🔧 LIMPA ACCOUNTS ANTIGAS
-          const allAccounts = msalInstance.getAllAccounts();
-          console.log(`Removendo ${allAccounts.length} contas antigas`);
-          
-          for (let account of allAccounts) {
-            await msalInstance.getTokenCache().removeAccount(account);
-          }
-          
-          msalInstance.setActiveAccount(null);
-          getAllTokens();
-          
-          // 🔧 LIMPA A FLAG PARA PERMITIR NOVO PROCESSAMENTO
-          resetAuthStateFlag();
-          
-          const response = await msalInstance.loginPopup({
-            ...loginRequest,
-            prompt: "select_account",
-            timeout: 60000
-          });
-          
-          if (response && response.account) {
-            console.log(`✓ Login bem-sucedido: ${response.account.username}`);
-            msalInstance.setActiveAccount(response.account);
-            
-            // 🔧 MARCA COMO PROCESSADO APÓS LOGIN COM SUCESSO
-            markAuthStateAsProcessed();
-          }
-          
-          isLoginInProgress = false;
-          await checkAuthStatus();
-          
-        } catch (popupError) {
-          isLoginInProgress = false;
-          
-          if (popupError.errorCode === "user_cancelled") {
-            console.log("ℹ Usuário cancelou o login");
-            setStatus("Login cancelado. Intenta nuevamente.");
-          } else if (popupError.errorCode === "interaction_in_progress") {
-            console.log("⚠ Interação já em progresso");
-            setStatus("Ya hay una sesión en progreso...");
-          } else {
-            console.error("❌ Erro no popup:", popupError);
-            setStatus(`Fallo: ${popupError.errorCode}`);
-          }
-          
-          document.getElementById("btnLogin").disabled = false;
-        }
-        
-      } catch (error) {
-        isLoginInProgress = false;
-        console.error("❌ Erro geral no login:", error);
-        setStatus("Fallo en la autenticación.");
+
         document.getElementById("btnLogin").disabled = false;
       }
     }
+
+    // =====================================================================
+    // LOGOUT
+    // =====================================================================
     
     async function logout() {
+      if (isProcessing) return;
+
+      isProcessing = true;
+      setStatus("Cerrando sesión...");
+      document.getElementById("btnLogin").disabled = true;
+
       try {
-        console.log("🔓 Iniciando logout...");
-        document.getElementById("btnLogin").disabled = true;
-        setStatus("Cerrando sesión...");
-        
-        const account = getBestAccount();
-        
+        log("LOGOUT", "Iniciando logout...");
+
+        const account = getActiveAccount();
+
         if (account) {
-          try {
-            console.log(`Logout da conta: ${account.username}`);
-            await msalInstance.logoutPopup({ account });
-          } catch (popupError) {
-            console.error("⚠ Erro no logout popup:", popupError);
-          }
+          log("LOGOUT", `Logout da conta: ${account.username}`);
+          
+          // 🔧 USA REDIRECT PARA LOGOUT
+          await msalInstance.logoutRedirect({
+            account: account
+          });
+        } else {
+          log("LOGOUT", "Nenhuma conta para fazer logout");
+          
+          await clearAllAccounts();
+          isInitialized = false;
+          
+          document.getElementById("userEmail").textContent = "";
+          showLoginOverlay();
+          setStatus("Sesión cerrada. Vuelve a iniciar sesión.");
         }
-        
-        // 🔧 LIMPA TODAS AS CONTAS
-        const allAccounts = msalInstance.getAllAccounts();
-        for (let acc of allAccounts) {
-          await msalInstance.getTokenCache().removeAccount(acc);
-        }
-        
-        msalInstance.setActiveAccount(null);
-        document.getElementById("userEmail").textContent = "";
-        
-        // 🔧 FORÇA REINICIALIZAÇÃO
-        isInitialized = false;
-        resetAuthStateFlag();
-        clearMsalCache();
-        
-        console.log("✓ Logout completo");
-        showLoginOverlay();
-        setStatus("Sesión cerrada. Vuelve a iniciar sesión.");
-        
-        // 🔧 REINICIA MSAL APÓS LOGOUT
-        setTimeout(() => {
-          initMsal();
-        }, 500);
-        
+
       } catch (error) {
-        console.error("❌ Erro no logout:", error);
-        document.getElementById("btnLogin").disabled = false;
-        setStatus("Error al cerrar sesión.");
+        logError("LOGOUT", error);
+        
+        // Mesmo com erro, limpa a UI
+        await clearAllAccounts();
+        isInitialized = false;
+        
+        document.getElementById("userEmail").textContent = "";
+        showLoginOverlay();
+        setStatus("Sesión cerrada.");
       }
+
+      isProcessing = false;
     }
-    
+
     // =====================================================================
     // EVENT LISTENERS
     // =====================================================================
-    window.addEventListener("focus", () => {
-      if (isInitialized && !isLoginInProgress) {
-        console.log("🔄 Janela em foco, verificando autenticação...");
-        checkAuthStatus().catch(console.error);
+    
+    window.addEventListener("load", async () => {
+      log("APP", "Página carregada");
+      await initializeMsal();
+    });
+
+    window.addEventListener("focus", async () => {
+      if (isInitialized && !isProcessing) {
+        log("APP", "Janela em foco");
+        await checkAndDisplayAuth();
       }
     });
-    
-    window.addEventListener("popstate", () => {
-      if (isInitialized && !isLoginInProgress) {
-        console.log("🔄 Navegação detectada, verificando autenticação...");
-        checkAuthStatus().catch(console.error);
-      }
-    });
-    
-    window.addEventListener("load", () => {
-      console.log("📍 Página carregada");
-      initMsal();
-    });
-    
-    // 🔧 PREVINE RELOAD ACIDENTAL
+
+    // 🔧 AVISA SE TENTAR FECHAR DURANTE PROCESSAMENTO
     window.addEventListener("beforeunload", (e) => {
-      if (isLoginInProgress) {
+      if (isProcessing) {
         e.preventDefault();
-        e.returnValue = '';
+        e.returnValue = "Um login está em progresso...";
       }
     });
+
   </script>
 </body>
 </html>
