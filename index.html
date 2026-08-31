@@ -396,45 +396,51 @@
     // =====================================================================
     
     async function handleLogin() {
-      if (isProcessing || !msalInstance) {
-        log("LOGIN", "⚠ Já há um processo em andamento ou MSAL não inicializado");
-        return;
-      }
+  if (isProcessing || !msalInstance) {
+    log("LOGIN", "⚠ Já há um processo em andamento ou MSAL não inicializado");
+    return;
+  }
 
-      isProcessing = true;
-      document.getElementById("btnLogin").disabled = true;
-      setStatus("Abriendo sesión de Microsoft...");
+  isProcessing = true;
+  document.getElementById("btnLogin").disabled = true;
+  setStatus("Abriendo sesión de Microsoft...");
 
-      try {
-        log("LOGIN", "Iniciando loginRedirect()...");
+  try {
+    log("LOGIN", "Iniciando loginPopup()...");
 
-        // 🔧 LIMPA CONTAS ANTIGAS
-        await clearAllAccounts();
+    // 🔧 LIMPA CONTAS ANTIGAS
+    await clearAllAccounts();
 
-        // 🔧 USA REDIRECT EM VEZ DE POPUP
-        await msalInstance.loginRedirect({
-          ...loginRequest,
-          prompt: "select_account"
-        });
+    // 🔧 USA POPUP EM VEZ DE REDIRECT (SEM POP-UP DE CONFIRMAÇÃO)
+    const response = await msalInstance.loginPopup({
+      ...loginRequest,
+      prompt: "select_account"
+    });
 
-        // Se chegou aqui, o redirect foi iniciado
-        log("LOGIN", "Redirecionamento para Microsoft iniciado...");
-        setStatus("Redirecionando a Microsoft...");
-
-      } catch (error) {
-        logError("LOGIN", error);
-        isProcessing = false;
-
-        if (error.errorCode === "user_cancelled") {
-          log("LOGIN", "Usuário cancelou o login");
-          setStatus("Login cancelado.");
-        } else {
-          setStatus("Error en la autenticación.");
-        }
-
-        document.getElementById("btnLogin").disabled = false;
-      }
+    if (response && response.account) {
+      log("LOGIN", `✓ Login bem-sucedido: ${response.account.username}`);
+      msalInstance.setActiveAccount(response.account);
+      
+      // Vai direto para a próxima página
+      await checkAndDisplayAuth();
     }
+
+    isProcessing = false;
+
+  } catch (error) {
+    logError("LOGIN", error);
+    isProcessing = false;
+
+    if (error.errorCode === "user_cancelled") {
+      log("LOGIN", "Usuário cancelou o login");
+      setStatus("Login cancelado.");
+    } else {
+      setStatus("Error en la autenticación.");
+    }
+
+    document.getElementById("btnLogin").disabled = false;
+  }
+}
 
     // =====================================================================
     // LOGOUT
