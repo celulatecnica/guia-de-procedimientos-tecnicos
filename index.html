@@ -441,49 +441,49 @@
     // =====================================================================
     
     async function logout() {
-      if (isProcessing) return;
+  if (isProcessing) return;
 
-      isProcessing = true;
-      setStatus("Cerrando sesión...");
-      document.getElementById("btnLogin").disabled = true;
+  isProcessing = true;
+  setStatus("Cerrando sesión...");
+  document.getElementById("btnLogin").disabled = true;
 
-      try {
-        log("LOGOUT", "Iniciando logout...");
+  try {
+    log("LOGOUT", "Iniciando logout...");
 
-        const account = getActiveAccount();
+    const account = getActiveAccount();
 
-        if (account) {
-          log("LOGOUT", `Logout da conta: ${account.username}`);
-          
-          // 🔧 USA REDIRECT PARA LOGOUT
-          await msalInstance.logoutRedirect({
-            account: account
-          });
-        } else {
-          log("LOGOUT", "Nenhuma conta para fazer logout");
-          
-          await clearAllAccounts();
-          isInitialized = false;
-          
-          document.getElementById("userEmail").textContent = "";
-          showLoginOverlay();
-          setStatus("Sesión cerrada. Vuelve a iniciar sesión.");
-        }
-
-      } catch (error) {
-        logError("LOGOUT", error);
-        
-        // Mesmo com erro, limpa a UI
-        await clearAllAccounts();
-        isInitialized = false;
-        
-        document.getElementById("userEmail").textContent = "";
-        showLoginOverlay();
-        setStatus("Sesión cerrada.");
-      }
-
-      isProcessing = false;
+    if (account) {
+      log("LOGOUT", `Logout da conta: ${account.username}`);
+      
+      // 🔧 USA POPUP EM VEZ DE REDIRECT
+      await msalInstance.logoutPopup({
+        account: account,
+        mainWindowRedirectUri: redirectUri // 🔧 RETORNA PARA AQUI
+      });
     }
+
+    // Limpa após logout
+    await clearAllAccounts();
+    isInitialized = false;
+    
+    document.getElementById("userEmail").textContent = "";
+    showLoginOverlay();
+    setStatus("Sesión cerrada. Vuelve a iniciar sesión.");
+
+  } catch (error) {
+    logError("LOGOUT", error);
+    
+    // Mesmo com erro, limpa a UI
+    await clearAllAccounts();
+    isInitialized = false;
+    
+    document.getElementById("userEmail").textContent = "";
+    showLoginOverlay();
+    setStatus("Sesión cerrada.");
+  }
+
+  isProcessing = false;
+}
 
     // =====================================================================
     // EVENT LISTENERS
