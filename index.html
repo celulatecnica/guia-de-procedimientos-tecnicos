@@ -14,48 +14,6 @@ html, body {
   background: #FFFFFF;
 }
 
-#login-screen {
-  width: 100%;
-  min-height: 100vh;
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  box-sizing: border-box;
-
-  padding-top: 223px;
-}
-
-.login-card {
-  background: #FBFBFD;
-  width: 1200px;
-  min-height: 500px;
-  padding-bottom: 40px;
-  padding-top: 90px;
-  padding-right: 90px;
-  padding-left: 90px;
-  border-radius: 12px;
-  box-shadow: none;
-  text-align: left;
-  box-sizing: border-box;
-}
-
-.login-card h2 {
-  font-size: 38px;
-  font-weight: 700;
-  line-height: 1.15;
-  margin: 0 0 28px 0;
-  text-align: left;
-  color: #272727;
-}
-
-.login-card p {
-  font-size: 22px;
-  line-height: 1.5;
-  margin: 0 0 30px 0;
-  text-align: left;
-  color: #272727;
-}
-
 .status {
   font-size: 16px;
   margin: 12px 0 12px 0;
@@ -197,36 +155,80 @@ iframe {
   vertical-align: middle;
 }
 
-.login-card {
-  background: #FBFBFD;
-  width: 1200px;
-  min-height: 500px;
-  padding: 90px;
-  border-radius: 12px;
-  box-sizing: border-box;
-
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+.app-locked {
+  filter: blur(12px);
+  pointer-events: none;
+  user-select: none;
 }
 
-.login-info {
-  max-width: 420px;
-}
+.login-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
 
-.login-ilustracao {
   display: flex;
   justify-content: center;
   align-items: center;
+
+  background: rgba(0,0,0,.45);
 }
 
-.login-ilustracao img {
-  max-width: 500px;
-  width: 100%;
-  height: auto;
-  display: block;
+.login-overlay.hidden {
+  display: none;
 }
-  </style>
+
+.login-card-modal {
+  width: 520px;
+  max-width: calc(100% - 32px);
+
+  background: rgba(23,23,23,.95);
+
+  border: 1px solid #2A2A2A;
+
+  border-radius: 16px;
+
+  padding: 48px;
+
+  text-align: center;
+
+  color: #F5F5F7;
+
+  box-shadow:
+    0 25px 80px rgba(0,0,0,.50);
+}
+
+.login-logo {
+  height: 42px;
+  display: block;
+  margin: 0 auto 16px auto;
+}
+
+.login-title {
+  margin: 0;
+
+  font-size: 28px;
+  font-weight: 600;
+
+  color: #F5F5F7;
+}
+
+.login-description {
+  margin: 18px 0 24px;
+
+  font-size: 16px;
+
+  line-height: 1.6;
+
+  color: #D1D1D6;
+}
+
+.status {
+  margin-top: 12px;
+  font-size: 13px;
+  color: #8E8E93;
+}
+
+</style>
 
   <script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.0/lib/msal-browser.min.js"></script>
 </head>
@@ -241,28 +243,32 @@ iframe {
   </div>
 </div>
 
-  <div id="login-screen">
-    <div class="login-card">
+  <div id="loginOverlay" class="login-overlay">
 
-  <div class="login-info">
+  <div class="login-card-modal">
 
-    <h2>
-      Guía de<br>
-      Procedimientos<br>
-      <span class="linha-tecnicos">
-        Técnicos
-        <img src="imagenes/directv.png" class="logo-directv-titulo" alt="DirectV">
-      </span>
+    imagenes/logo-directv.png
+
+    <h2 class="login-title">
+      Guía de Procedimientos Técnicos
     </h2>
 
-    <p>
-      Inicia sesión para acceder a los manuales<br>
+    <p class="login-description">
+      Inicia sesión para acceder a los manuales
+      <br>
       de atención técnica.
     </p>
 
-    <button id="btnLogin" class="btn-login" onclick="login()" disabled>
-      <img src="imagenes/icon_entrar.png">
+    <button
+      id="btnLogin"
+      class="btn-login"
+      onclick="login()"
+      disabled>
+
+      imagenes/icon_entrar.png
+
       <span>Entrar</span>
+
     </button>
 
     <div id="status" class="status">
@@ -271,23 +277,22 @@ iframe {
 
   </div>
 
-  <div class="login-ilustracao">
-    <img src="imagenes/img_ilustracao.png">
-  </div>
-
 </div>
-  </div>
 
-  <div id="content">
+<div id="appContent" class="app-locked">
+
+<div id="content">
 
     <div id="topbar">
       <button id="btnLogout" onclick="logout()">Sair</button>
     </div>
 
     <iframe id="docFrame" src="about:blank"></iframe>
-  </div>
+</div>
 
-  <script>
+</div>
+
+<script>
 
 function showContent() {
   document.getElementById("login-screen").style.display = "none";
