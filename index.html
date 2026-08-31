@@ -144,30 +144,23 @@ iframe {
 }
 
 .login-card-modal {
-  width: 80px;
+  width: 520px;
   max-width: calc(100% - 32px);
-
   background: rgba(23,23,23,.95);
-
   border: 1px solid #2A2A2A;
-
   border-radius: 16px;
-
   padding: 48px;
-
   text-align: center;
-
   color: #F5F5F7;
-
-  box-shadow:
-    0 25px 80px rgba(0,0,0,.50);
+  box-shadow: 0 25px 80px rgba(0,0,0,.50);
 }
 
 .login-logo {
-  width: 80px;
-  height: auto;
+  height: 50px;
+  margin-left: auto;
+  margin-right: auto;
+  margin-bottom: 12px;
   display: block;
-  margin: 0 auto 20px auto;
 }
 
 .login-title {
@@ -205,20 +198,14 @@ iframe {
 </head>
 
 <body>
-
-
-
-
-  <div id="loginOverlay" class="login-overlay">
-
-  <div class="login-card-modal">
-
-    <img src="imagenes/directv.png">
-
-    <h2 class="login-title">
-      Guía de Procedimientos Técnicos
-    </h2>
-
+   
+ <div id="loginOverlay" class="login-overlay">
+    <div class="login-card">
+      <div class="login-header">
+        <img src="arquivos/favicon.png" alt="GPT" class="login-logo">
+        <h2> Guía de Procedimientos Técnicos</h2>
+      </div>
+      
     <p class="login-description">
       Inicia sesión para acceder a los manuales
       <br>
