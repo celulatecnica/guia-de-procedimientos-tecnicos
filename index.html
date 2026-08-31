@@ -22,19 +22,10 @@ html, body {
 }
 
 .btn-login {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-
-  font-size: 18px;
-  padding: 16px 28px;
-  margin: 0;
-  border: none;
+  width: 50%;
+  height: 48px;
+  font-size: 16px;
   border-radius: 12px;
-  background: #0078D4;
-  color: #FFFFFF;
-  cursor: pointer;
 }
 
 .btn-login .icone-entrar {
@@ -144,7 +135,14 @@ iframe {
   align-items: center;
   gap: 10px;
 }
-
+    
+.login-card {
+  width: 520px;
+  max-width: calc(100% - 32px);
+  padding: 48px;
+  border-radius: 16px;
+}
+    
 .login-card .logo-directv-titulo {
   width: 80px !important;
   height: auto !important;
@@ -198,9 +196,11 @@ iframe {
 }
 
 .login-logo {
-  height: 42px;
+  height: 50px;
+  margin-bottom: 12px;
   display: block;
-  margin: 0 auto 16px auto;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .login-title {
@@ -212,20 +212,24 @@ iframe {
   color: #F5F5F7;
 }
 
+.login-card h2 {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 600;
+  color: #F5F5F7;
+}
+
 .login-description {
-  margin: 18px 0 24px;
-
+  margin: 16px 0 24px 0;
   font-size: 16px;
-
   line-height: 1.6;
-
   color: #D1D1D6;
 }
 
 .status {
   margin-top: 12px;
   font-size: 13px;
-  color: #8E8E93;
+  color: #8e8e93;
 }
 
 </style>
