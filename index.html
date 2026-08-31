@@ -440,49 +440,35 @@
     // LOGOUT
     // =====================================================================
     
-    async function logout() {
+async function logout() {
   if (isProcessing) return;
 
   isProcessing = true;
-  setStatus("Cerrando sesión...");
   document.getElementById("btnLogin").disabled = true;
 
   try {
-    log("LOGOUT", "Iniciando logout...");
+    log("LOGOUT", "Logout silencioso iniciado...");
+    setStatus("Cerrando sesión...");
 
-    const account = getActiveAccount();
-
-    if (account) {
-      log("LOGOUT", `Logout da conta: ${account.username}`);
-      
-      // 🔧 USA POPUP EM VEZ DE REDIRECT
-      await msalInstance.logoutPopup({
-        account: account,
-        mainWindowRedirectUri: redirectUri // 🔧 RETORNA PARA AQUI
-      });
-    }
-
-    // Limpa após logout
+    // 🔧 LIMPA TUDO LOCALMENTE SEM FAZER REDIRECT
     await clearAllAccounts();
     isInitialized = false;
     
     document.getElementById("userEmail").textContent = "";
-    showLoginOverlay();
-    setStatus("Sesión cerrada. Vuelve a iniciar sesión.");
+    
+    // 🔧 AGUARDA UM POUCO E MOSTRA TELA DE LOGIN (SEM POP-UP)
+    setTimeout(() => {
+      showLoginOverlay();
+      setStatus("Sesión cerrada. Vuelve a iniciar sesión.");
+      document.getElementById("btnLogin").disabled = false;
+      isProcessing = false;
+    }, 300);
 
   } catch (error) {
     logError("LOGOUT", error);
-    
-    // Mesmo com erro, limpa a UI
-    await clearAllAccounts();
-    isInitialized = false;
-    
-    document.getElementById("userEmail").textContent = "";
-    showLoginOverlay();
-    setStatus("Sesión cerrada.");
+    isProcessing = false;
+    document.getElementById("btnLogin").disabled = false;
   }
-
-  isProcessing = false;
 }
 
     // =====================================================================
